@@ -11,7 +11,7 @@ The cut-pursuit algorithms minimize functionals structured, over a weighted grap
     _F_: _x_ ∈ ℍ<sup>_V_</sup> ↦ _f_(_x_) + 
  ∑<sub>(_u_,_v_) ∈ _E_</sub> _w_<sub>(_u_,_v_)</sub>  _ψ_(_x_<sub>_u_</sub>, _x_<sub>_v_</sub>) ,    
 
-where ℍ is some base space, and the functional _ψ_: ℍ² → ℝ penalizes dissimilarity between its arguments, in order to enforce solutions which are *piecewise constants along the graph _G_*.
+where ℍ is some base space, and the functional _ψ_: ℍ² → ℝ penalizes dissimilarity between its arguments, in order to enforce solutions which are *piecewise constant along the graph _G_*.
 
 The cut-pursuit approach is to seek partitions __*V*__ of the set of vertices _V_, constituting the constant connected components of the solution, by successively solving the corresponding problem, structured over the reduced graph __*G*__ = (__*V*__, __*E*__), that is
 
@@ -126,21 +126,21 @@ The script `example_EEG.m` exemplifies the use of [`Cp_d1_ql1b`](#specialization
 The script `example_labeling_3D.m` exemplifies the use of [`Cp_d1_lsx`](#specialization-Cp_d1_lsx-separable-loss-simplex-constraints-and-graph-total-variation), on a task of _spatial regularization of semantic classification of a 3D point cloud_.  
 
 <table><tr>
-<td width="10%"></td>
-<td width="20%"> ground truth </td>
-<td width="10%"></td>
-<td width="20%"> random forest classifier </td>
-<td width="10%"></td>
-<td width="20%"> regularized classification </td>
-<td width="10%"></td>
+<td width="5%"></td>
+<td width="25%"> ground truth </td>
+<td width="5%"></td>
+<td width="25%"> random forest classifier </td>
+<td width="5%"></td>
+<td width="25%"> regularized classification </td>
+<td width="5%"></td>
 </tr><tr>
-<td width="10%"></td>
-<td width="20%"><img src="data/labeling_3D_ground_truth.png" width="100%"/></td>
-<td width="10%"></td>
-<td width="20%"><img src="data/labeling_3D_random_forest.png" width="100%"/></td>
-<td width="10%"></td>
-<td width="20%"><img src="data/labeling_3D_regularized.png" width="100%"/></td>
-<td width="10%"></td>
+<td width="5%"></td>
+<td width="25%"><img src="data/labeling_3D_ground_truth.png" width="100%"/></td>
+<td width="5%"></td>
+<td width="25%"><img src="data/labeling_3D_random_forest.png" width="100%"/></td>
+<td width="5%"></td>
+<td width="25%"><img src="data/labeling_3D_regularized.png" width="100%"/></td>
+<td width="5%"></td>
 </tr></table>
 
 ## References
@@ -152,4 +152,3 @@ Y. Boykov and V. Kolmogorov, An Experimental Comparison of Min-Cut/Max-Flow Algo
 
 ## License
 This software is under the GPLv3 license.
-
