@@ -21,10 +21,12 @@ The cut-pursuit approach is to seek partitions __*V*__ of the set of vertices _V
 and then refining the partition.  
 A key requirement is thus the ability to solve the reduced problem, which often have the exact same structure as the original one, but with much less vertices |__*V*__| ≪ |_V_|. If the solution of the original problem has only few constant connected components in comparison to the number of vertices, the cut-pursuit strategy can speed-up minimization by several orders of magnitude.  
 
-Cut-pursuit algorithms come in two main flavors, namely “directionally differentiable” and “noncontinuous”.  
+Cut-pursuit algorithms come in two main flavors, namely “directionally differentiable” and “noncontinuous”.
+
 * In the **directionally differentiable** case, the base space ℍ is typically a vector space, and it is required that _f_ is differentiable, or at least that its nondifferentiable part is _separable along the graph_ and admits (potentially infinite) _directional derivatives_. This comprises notably many convex problems, where 
 _ψ_(_x_<sub>_u_</sub>, _x_<sub>_v_</sub>) = ║<i>x</i><sub>_u_</sub> − _x_<sub>_v_</sub>║, that is to say involving a _**graph total variation**_. The refinement of the partition is based on the search for a steep directional derivative, and the reduced problem is solved using convex or continuous optimization; optimality guarantees can be provided.  
-* In the **noncontinuous** case, the dissimilarity penalization typically uses _ψ_(_x_<sub>_u_</sub>, _x_<sub>_v_</sub>) = 0 if _x_<sub>_u_</sub> =_x_<sub>_v_</sub>, 1 otherwise, resulting in a measure of the _**contour**_ of the constant connected components. The functional _f_ is typically required to be separable along the graph, and to have computational properties favorable enough for solving reduced problems. The refinement of the partition relies on greedy heuristics.  
+* In the **noncontinuous** case, the dissimilarity penalization typically uses _ψ_(_x_<sub>_u_</sub>, _x_<sub>_v_</sub>) = 0 if _x_<sub>_u_</sub> =_x_<sub>_v_</sub>, 1 otherwise, resulting in a measure of the _**contour**_ of the constant connected components. The functional _f_ is typically required to be separable along the graph, and to have computational properties favorable enough for solving reduced problems. The refinement of the partition relies on greedy heuristics.
+
 Both flavors admit multidimensional extensions, that is to say ℍ is not required to be only scalar.
 
 ### Generic classes
