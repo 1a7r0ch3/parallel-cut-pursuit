@@ -2,13 +2,16 @@
          %  script for illustrating cp_pfdr_d1_ql1b on EEG problem  %
          %----------------------------------------------------------%
 % Reference: H. Raguet and L. Landrieu, Cut-Pursuit Algorithm for Regularizing
-% Nonsmooth Functionals with Graph Total Variation.
+% Nonsmooth Functionals with Graph Total Variation, International Conference on
+% Machine Learning, PMLR, 2018, 80, 4244-4253
 %
-% Hugo Raguet 2017
+% Hugo Raguet 2017, 2018
 cd(fileparts(which('example_EEG.m')));
+addpath(genpath('./bin/'));
 
 %%%  general parameters  %%%
-printResults = true; % requires color encapsulated postscript driver on your system
+printResults = false; % requires color encapsulated postscript driver on your system
+                     % be sure to run octave 4.2.2 or later, fixing a bug in trisurf
 
 % parameters for colormap
 numberOfColors = 256;
@@ -18,7 +21,7 @@ darkLevel = 1/16;
 CP_difTol = 1e-4;
 CP_itMax = 15;
 PFDR_rho = 1.5;
-PFDR_condMin = 1e-3;
+PFDR_condMin = 1e-2;
 PFDR_difRcd = 0;
 PFDR_difTol = 1e-3*CP_difTol;
 PFDR_itMax = 1e4;
@@ -54,25 +57,28 @@ figure(1), clf, colormap(colMap);
 % map the color index
 xcol = floor((x0 - x0min)/(x0max - x0min)*numberOfColors) + 2;
 xcol(~supp0) = 1;
-% be sure to run octave 4.2.2 or later, fixing a bug in trisurf
+% require octave 4.2.2 or later, fixing a bug in trisurf
 trisurf(mesh.f, mesh.v(:,1), mesh.v(:,2), mesh.v(:,3), xcol, 'CDataMapping', 'direct');
 set(gca, 'Color', 'none'); axis off;
 set(gca, 'CameraPosition', CAM);
 drawnow('expose');
 if printResults
     fprintf('print ground truth... ')
-    print(gcf, '-depsc', 'ground_truth');
+    print(gcf, '-depsc', 'EEG_ground_truth');
     fprintf('done.\n');
 end
 
-%%%  solve the problem  %%%
+%%%  solve the optimization problem  %%%
+tic;
 Yl1 = []; Lbnd = 0.0; Ubnd = Inf;
-[cv, rx, it, obj, tim] = cp_pfdr_d1_ql1b_mex(y, Phi, first_edge, ...
+[cv, rx] = cp_pfdr_d1_ql1b_mex(y, Phi, first_edge, ...
     adj_vertices, d1_weights, Yl1, l1_weights, Lbnd, Ubnd, CP_difTol, ...
     CP_itMax, PFDR_rho, PFDR_condMin, PFDR_difRcd, PFDR_difTol, PFDR_itMax, ...
     PFDR_verbose);
+time = toc;
 x = rx(cv+1); % rx is components values, cv is components indices
 clear cv rx;
+fprintf('Total MEX execution time %.1f s\n\n', time);
 
 %%%  compute Dice scores  %%%
 % support retrieved with raw model
@@ -106,7 +112,7 @@ set(gca, 'CameraPosition', CAM);
 drawnow('expose');
 if printResults
     fprintf('print retrieved brain activity... ');
-    print(gcf, '-depsc', 'brain_activity');
+    print(gcf, '-depsc', 'EEG_brain_activity');
     fprintf('done.\n');
 end
 
@@ -120,6 +126,6 @@ set(gca, 'CameraPosition', CAM);
 drawnow('expose');
 if printResults
     fprintf('print retrieved brain sources... ')
-    print(gcf, '-depsc', 'brain_sources');
+    print(gcf, '-depsc', 'EEG_brain_sources');
     fprintf('done.\n');
 end
