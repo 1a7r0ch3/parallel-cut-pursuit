@@ -54,7 +54,7 @@ When _y_<sup>(ℓ<sub>1</sub>)</sup> is zero, the combination of ℓ<sub>1</sub>
 
 Currently, _A_ must be provided as a matrix. See the documentation for special cases.  
 
-The reduced problem is solved using the [preconditioned forward-Douglas–Rachford splitting algorithm](https://1a7r0ch3.github.io/fdr/) (see also the [corresponding repository](https://github.com/1a7r0ch3/pcd-prox-split).  
+The reduced problem is solved using the [preconditioned forward-Douglas–Rachford splitting algorithm](https://1a7r0ch3.github.io/fdr/) (see also the [corresponding repository](https://github.com/1a7r0ch3/pcd-prox-split)).  
 
 A use case where _A_ is a full ill-conditioned matrix, with positivity and fused LASSO constraints is provided with [GNU Octave or Matlab](#gnu-octave-or-matlab) interface, on a task of _brain source identification with electroencephalography_.  
 
@@ -79,7 +79,7 @@ _u_ ∈ Δ<sub>_K_</sub> is the uniform discrete distribution over _K_,
 and
 KL: (_p_, _q_) ↦ ∑<sub>_k_ ∈ _K_</sub> _p_<sub>_k_</sub> log(_p_<sub>_k_</sub>/_q_<sub>_k_</sub>).  
 
-The reduced problem is also solved using the [preconditioned forward-Douglas–Rachford splitting algorithm](https://1a7r0ch3.github.io/fdr/) (see also the [corresponding repository](https://github.com/1a7r0ch3/pcd-prox-split).  
+The reduced problem is also solved using the [preconditioned forward-Douglas–Rachford splitting algorithm](https://1a7r0ch3.github.io/fdr/) (see also the [corresponding repository](https://github.com/1a7r0ch3/pcd-prox-split)).  
 
 A use case with the smoothed Kullback–Leibler is provided with [GNU Octave or Matlab](#gnu-octave-or-matlab) interface, on a task of _spatial regularization of semantic classification of a 3D point cloud_.  
 

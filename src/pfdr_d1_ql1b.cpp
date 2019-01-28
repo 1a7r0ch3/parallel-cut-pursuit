@@ -1,6 +1,7 @@
 /*=============================================================================
  * Hugo Raguet 2016
  *===========================================================================*/
+#include <cmath>
 #include "../include/pfdr_d1_ql1b.hpp"
 #include "../include/matrix_tools.hpp"
 #include "../include/omp_num_threads.hpp"
