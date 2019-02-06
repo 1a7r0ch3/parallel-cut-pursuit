@@ -23,8 +23,8 @@
 using namespace std;
 
 template <typename real_t, typename index_t>
-Pfdr<real_t, index_t>::Pfdr(index_t size, size_t D, size_t aux_size,
-    const index_t* aux_idx, Condshape gashape, Condshape wshape) :
+Pfdr<real_t, index_t>::Pfdr(index_t size, size_t aux_size,
+    const index_t* aux_idx, size_t D, Condshape gashape, Condshape wshape) :
     Pcd_prox<real_t>(size*D), size(size), aux_size(aux_size),
     D(D), aux_idx(aux_idx), gashape(gashape), wshape(wshape)
 {

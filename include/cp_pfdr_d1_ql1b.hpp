@@ -63,10 +63,10 @@ public:
 
     /* the destructor does not free pointers which are supposed to be provided 
      * by the user (forward-star graph structure given at construction, 
-     * monitoring arrays, matrix and observation arrays); it does free the rest 
-     * (components assignment and reduced problem elements, etc.), but this can 
-     * be prevented by copying the corresponding pointer member and set it to 
-     * null before deleting */
+     * monitoring arrays, matrix and observation arrays); IT DOES FREE THE REST
+     * (components assignment and reduced problem elements, etc.), but this can
+     * be prevented by getting the corresponding pointer member and setting it
+     * to null beforehand */
     ~Cp_d1_ql1b();
 
     /* if A is null, it is supposed to be scalar and N is set to DIAG_ATA,
@@ -91,9 +91,7 @@ public:
     /* overload for default dif_tol parameter */
     void set_pfdr_param(real_t rho = 1.0, real_t cond_min = 1e-2,
         real_t dif_rcd = 0.0, int it_max = 1e4)
-    {
-        set_pfdr_param(rho, cond_min, dif_rcd, it_max, 1e-3*dif_tol);
-    }
+    { set_pfdr_param(rho, cond_min, dif_rcd, it_max, 1e-3*dif_tol); }
 
 private:
 
@@ -150,27 +148,26 @@ private:
 
     /**  methods  **/
 
-    /* NOTA: if Yl1 is not constant, the solve_* methods actually solve only
-     * an approximation of the reduced problem, replacing the weighted sum of
-     * distances to Yl1 by the distance to the weighted median of Yl1 */
+    /* allocate and compute reduced values;
+     * do nothing if the array of reduced values is not null;
+     * NOTA: if Yl1 is not constant, this actually solves only an approximation
+     * of the reduced problem, replacing the weighted sum of distances to Yl1
+     * by the distance to the weighted median of Yl1 */
+    void solve_reduced_problem() override;
 
-    /* solve unidimensional quadratic + l1 problem; in this specialization,
-     * will always be called with component 0 containing full graph */
-    void solve_univertex_problem(real_t* uX, comp_t rv = 0);
-
-    void solve_reduced_problem();
-
-    index_t split();
+    index_t split() override;
 
     /* relative iterate evolution in l2 norm and components saturation */
-    real_t compute_evolution(const bool compute_dif, comp_t & saturation);
+    real_t compute_evolution(bool compute_dif, comp_t & saturation) override;
 
     /* in the precomputed A^t A version, a constant 1/2||Y||^2 in the quadratic
      * part is omited */
-    real_t compute_objective();
+    real_t compute_objective() override;
 
     /**  type resolution for base template class members  **/
     using Cp_d1<real_t, index_t, comp_t>::compute_graph_d1;
+    using Cp_d1<real_t, index_t, comp_t>::rX;
+    using Cp_d1<real_t, index_t, comp_t>::last_rX;
     using Cp<real_t, index_t, comp_t>::monitor_evolution;
     using Cp<real_t, index_t, comp_t>::set_saturation;
     using Cp<real_t, index_t, comp_t>::is_saturated;
@@ -191,8 +188,6 @@ private:
     using Cp<real_t, index_t, comp_t>::rV;
     using Cp<real_t, index_t, comp_t>::rE;
     using Cp<real_t, index_t, comp_t>::comp_assign;
-    using Cp<real_t, index_t, comp_t>::rX;
-    using Cp<real_t, index_t, comp_t>::last_rX;
     using Cp<real_t, index_t, comp_t>::comp_list;
     using Cp<real_t, index_t, comp_t>::first_vertex;
     using Cp<real_t, index_t, comp_t>::reduced_edges;

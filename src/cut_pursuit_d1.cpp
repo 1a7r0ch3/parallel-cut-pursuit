@@ -12,19 +12,49 @@
 using namespace std;
 
 template <typename real_t, typename index_t, typename comp_t>
-Cp_d1<real_t, index_t, comp_t>::Cp_d1(index_t V, size_t D, index_t E,
-    const index_t* first_edge, const index_t* adj_vertices, D1p d1p) :
-    Cp<real_t, index_t, comp_t>(V, D, E, first_edge, adj_vertices), d1p(d1p)
-{ coor_weights = nullptr; }
+Cp_d1<real_t, index_t, comp_t>::Cp_d1(index_t V, index_t E,
+    const index_t* first_edge, const index_t* adj_vertices, size_t D, D1p d1p)
+    : Cp<real_t, index_t, comp_t>(V, E, first_edge, adj_vertices), D(D),
+    d1p(d1p)
+{
+    rX = last_rX = nullptr;
+    coor_weights = nullptr;
+}
 
 template <typename real_t, typename index_t, typename comp_t>
-void Cp_d1<real_t, index_t, comp_t>::set_edge_weights(const real_t* edge_weights,
-    real_t homo_edge_weight, const real_t* coor_weights)
+Cp_d1<real_t, index_t, comp_t>::~Cp_d1(){ free(rX); free(last_rX); }
+
+template <typename real_t, typename index_t, typename comp_t>
+void Cp_d1<real_t, index_t, comp_t>::set_edge_weights(
+    const real_t* edge_weights, real_t homo_edge_weight,
+    const real_t* coor_weights)
 {
     Cp<real_t, index_t, comp_t>::set_edge_weights(edge_weights,
         homo_edge_weight);
     this->coor_weights = coor_weights;
 }
+
+template <typename real_t, typename index_t, typename comp_t>
+real_t* Cp_d1<real_t, index_t, comp_t>::get_reduced_values(){ return rX; }
+
+template <typename real_t, typename index_t, typename comp_t>
+void Cp_d1<real_t, index_t, comp_t>::set_reduced_values(real_t* rX)
+{ this->rX = rX; }
+
+template <typename real_t, typename index_t, typename comp_t>
+void Cp_d1<real_t, index_t, comp_t>::free_comp_values()
+{ free(rX); rX = nullptr; }
+
+template <typename real_t, typename index_t, typename comp_t>
+void Cp_d1<real_t, index_t, comp_t>::copy_last_comp_values()
+{
+    last_rX = (real_t*) malloc_check(sizeof(real_t)*V*D);
+    for (size_t i = 0; i < rV*D; i++){ last_rX[i] = rX[i]; }
+}
+
+template <typename real_t, typename index_t, typename comp_t>
+void Cp_d1<real_t, index_t, comp_t>::free_last_comp_values()
+{ free(last_rX); last_rX = nullptr; }
 
 template <typename real_t, typename index_t, typename comp_t>
 bool Cp_d1<real_t, index_t, comp_t>::is_almost_equal(comp_t ru, comp_t rv)
@@ -52,6 +82,8 @@ bool Cp_d1<real_t, index_t, comp_t>::is_almost_equal(comp_t ru, comp_t rv)
 template <typename real_t, typename index_t, typename comp_t> 
 index_t Cp_d1<real_t, index_t, comp_t>::merge()
 {
+    if (rV <= 1){ return 0; }
+
     index_t deactivation = 0;
 
     /* compute connected components of the reduced graph, stored as chains
@@ -169,7 +201,7 @@ template <typename real_t, typename index_t, typename comp_t>
 real_t Cp_d1<real_t, index_t, comp_t>::compute_graph_d1()
 {
     real_t tv = ZERO;
-    #pragma omp parallel for schedule(static) NUM_THREADS(2*E*D, E) \
+    #pragma omp parallel for schedule(static) NUM_THREADS(2*rE*D, rE) \
         reduction(+:tv)
     for (size_t re = 0; re < rE; re++){
         real_t *rXu = rX + reduced_edges[2*re]*D;

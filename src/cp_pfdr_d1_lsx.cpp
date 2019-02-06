@@ -17,17 +17,19 @@
 using namespace std;
 
 template <typename real_t, typename index_t, typename comp_t>
-Cp_d1_lsx<real_t, index_t, comp_t>::Cp_d1_lsx(index_t V, size_t D, index_t E,
-    const index_t* first_edge, const index_t* adj_vertices, const real_t* Y) :
-    Cp_d1<real_t, index_t, comp_t>(V, D, E, first_edge, adj_vertices, D11), Y(Y)
+Cp_d1_lsx<real_t, index_t, comp_t>::Cp_d1_lsx(index_t V, index_t E,
+    const index_t* first_edge, const index_t* adj_vertices, size_t D,
+    const real_t* Y) :
+    Cp_d1<real_t, index_t, comp_t>(V, E, first_edge, adj_vertices, D, D11),
+    Y(Y)
 {
     /* ensure handling of infinite values (negation, comparisons) is safe */
     static_assert(numeric_limits<real_t>::is_iec559,
         "Cut-pursuit d1 loss simplex: real_t must satisfy IEEE 754.");
 
     if (D > numeric_limits<comp_t>::max()){
-        cerr << "Cut-pursuit d1 loss simplex: comp_t must be able to represent "
-            "the dimension D (" << D << ")." << endl;
+        cerr << "Cut-pursuit d1 loss simplex: comp_t must be able to "
+            "represent the dimension D (" << D << ")." << endl;
         exit(EXIT_FAILURE);
     }
 
@@ -67,72 +69,78 @@ void Cp_d1_lsx<real_t, index_t, comp_t>::set_pfdr_param(real_t rho,
     this->pfdr_dif_tol = dif_tol;
 }
 
-/* solve unidimensional loss problem on simplex; in this specialization,
- * will always be called with component 0 containing full graph */
-template <typename real_t, typename index_t, typename comp_t>
-void Cp_d1_lsx<real_t, index_t, comp_t>::solve_univertex_problem(real_t* uX,
-    comp_t rv)
-{
-    #pragma omp parallel for schedule(static) NUM_THREADS(D*V, D)
-    for (size_t d = 0; d < D; d++){
-        uX[d] = ZERO;
-        for (size_t vd = d; vd < V*D; vd += D){ uX[d] += Y[vd]; }
-    }
-    if (loss == LINEAR){ /* optimum at simplex corner */
-        size_t idx = 0;
-        real_t max = uX[idx];
-        for (size_t d = 1; d < D; d++){ if (uX[d] > max){ max = uX[idx = d]; } }
-        for (size_t d = 0; d < D; d++){ uX[d] = d == idx ? ONE : ZERO; }
-    }else{ /* optimum at barycenter */
-        for (size_t d = 0; d < D; d++){ uX[d] /= V; }
-    }
-}
-
 template <typename real_t, typename index_t, typename comp_t>
 void Cp_d1_lsx<real_t, index_t, comp_t>::solve_reduced_problem()
 {
-    /**  compute reduced objects  **/
-    real_t* rY = (real_t*) malloc_check(sizeof(real_t)*D*rV);
-    real_t* reduced_loss_weights = loss == LINEAR ? nullptr :
-        (real_t*) malloc_check(sizeof(real_t)*rV);
-    #pragma omp parallel for schedule(dynamic) NUM_THREADS(V, rV)
-    for (comp_t rv = 0; rv < rV; rv++){
-        real_t *rYv = rY + rv*D;
-        for (size_t d = 0; d < D; d++){ rYv[d] = ZERO; }
-        if (loss != LINEAR){ reduced_loss_weights[rv] = ZERO; }
-        /* run along the component rv */
-        for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
-            index_t v = comp_list[i];
-            const real_t *Yv = Y + v*D;
-            for (size_t d = 0; d < D; d++){ rYv[d] += Yv[d]; }
-            if (loss != LINEAR){ reduced_loss_weights[rv] += LOSS_WEIGHTS_(v); }
+    if (rX){
+        return;
+    }else{
+        rX = (real_t*) malloc_check(sizeof(real_t)*D*rV);
+    } 
+
+    if (rV == 1){ /**  single connected component  **/
+
+        #pragma omp parallel for schedule(static) NUM_THREADS(D*V, D)
+        for (size_t d = 0; d < D; d++){
+            rX[d] = ZERO;
+            for (size_t vd = d; vd < V*D; vd += D){ rX[d] += Y[vd]; }
         }
-        if (loss != LINEAR){ 
-            for (size_t d = 0; d < D; d++){
-                rYv[d] /= reduced_loss_weights[rv];
+        if (loss == LINEAR){ /* optimum at simplex corner */
+            size_t idx = 0;
+            real_t max = rX[idx];
+            for (size_t d = 1; d < D; d++){
+                if (rX[d] > max){ max = rX[idx = d]; }
+            }
+            for (size_t d = 0; d < D; d++){ rX[d] = d == idx ? ONE : ZERO; }
+        }else{ /* optimum at barycenter */
+            for (size_t d = 0; d < D; d++){ rX[d] /= V; }
+        }
+
+    }else{ /**  preconditioned forward-Douglas-Rachford  **/
+
+        /* compute reduced observation and weights */
+        real_t* rY = (real_t*) malloc_check(sizeof(real_t)*D*rV);
+        real_t* reduced_loss_weights = loss == LINEAR ? nullptr :
+            (real_t*) malloc_check(sizeof(real_t)*rV);
+        #pragma omp parallel for schedule(dynamic) NUM_THREADS(V, rV)
+        for (comp_t rv = 0; rv < rV; rv++){
+            real_t *rYv = rY + rv*D;
+            for (size_t d = 0; d < D; d++){ rYv[d] = ZERO; }
+            if (loss != LINEAR){ reduced_loss_weights[rv] = ZERO; }
+            /* run along the component rv */
+            for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
+                index_t v = comp_list[i];
+                const real_t *Yv = Y + v*D;
+                for (size_t d = 0; d < D; d++){ rYv[d] += Yv[d]; }
+                if (loss != LINEAR){
+                    reduced_loss_weights[rv] += LOSS_WEIGHTS_(v);
+                }
+            }
+            if (loss != LINEAR){ 
+                for (size_t d = 0; d < D; d++){
+                    rYv[d] /= reduced_loss_weights[rv];
+                }
             }
         }
+
+        Pfdr_d1_lsx<real_t, comp_t> *pfdr = new Pfdr_d1_lsx<real_t, comp_t>(
+                rV, rE, reduced_edges, loss, D, rY, coor_weights);
+
+        pfdr->set_edge_weights(reduced_edge_weights);
+        pfdr->set_loss(reduced_loss_weights);
+        pfdr->set_conditioning_param(pfdr_cond_min, pfdr_dif_rcd);
+        pfdr->set_relaxation(pfdr_rho);
+        pfdr->set_algo_param(pfdr_dif_tol, pfdr_it_max, verbose);
+        pfdr->set_iterate(rX);
+        pfdr->initialize_iterate();
+
+        pfdr_it = pfdr->precond_proximal_splitting();
+
+        pfdr->set_iterate(nullptr); // prevent rX to be free()'d at deletion
+        delete pfdr;
+
+        free(rY); free(reduced_loss_weights);
     }
-
-    /**  preconditioned forward-Douglas-Rachford  **/
-    rX = (real_t*) malloc_check(sizeof(real_t)*D*rV);
-    Pfdr_d1_lsx<real_t, comp_t> *pfdr = new Pfdr_d1_lsx<real_t, comp_t>(
-            rV, D, rE, reduced_edges, loss, rY, coor_weights);
-
-    pfdr->set_iterate(rX);
-    pfdr->initialize_iterate();
-    pfdr->set_edge_weights(reduced_edge_weights);
-    pfdr->set_loss(reduced_loss_weights);
-    pfdr->set_conditioning_param(pfdr_cond_min, pfdr_dif_rcd);
-    pfdr->set_relaxation(pfdr_rho);
-    pfdr->set_algo_param(pfdr_dif_tol, pfdr_it_max, verbose);
-
-    pfdr_it = pfdr->precond_proximal_splitting();
-
-    pfdr->set_iterate(nullptr); // prevent rX to be free()'d at deletion
-    delete pfdr;
-
-    free(rY); free(reduced_loss_weights);
 }
 
 template <typename real_t, typename index_t, typename comp_t>
@@ -314,8 +322,8 @@ index_t Cp_d1_lsx<real_t, index_t, comp_t>::split()
 }
 
 template <typename real_t, typename index_t, typename comp_t>
-real_t Cp_d1_lsx<real_t, index_t, comp_t>::compute_evolution(
-    const bool compute_dif, comp_t & saturation)
+real_t Cp_d1_lsx<real_t, index_t, comp_t>::compute_evolution(bool compute_dif,
+    comp_t & saturation)
 {
     comp_t num_ops = compute_dif ? V*D : saturation*D;
     real_t dif = ZERO;
@@ -396,9 +404,6 @@ real_t Cp_d1_lsx<real_t, index_t, comp_t>::compute_objective()
 
 /* instantiate for compilation */
 template class Cp_d1_lsx<float, uint32_t, uint16_t>;
-
 template class Cp_d1_lsx<double, uint32_t, uint16_t>;
-
 template class Cp_d1_lsx<float, uint32_t, uint32_t>;
-
 template class Cp_d1_lsx<double, uint32_t, uint32_t>;

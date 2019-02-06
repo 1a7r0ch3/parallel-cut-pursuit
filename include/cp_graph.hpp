@@ -6,7 +6,7 @@
  * - nodes and arcs arrays made public for direct manipulation by cut-pursuit
  * - cannot reallocate nodes and arcs array for now
  * - max flows are not computed anymore, since they are not useful here
- * - capacities are all of type real_t, node and edges are indexed by
+ * - capacities are all of type real_t, nodes and edges are indexed by
  *   integral type index_t, and a type comp_t is used to index components
  * - DIST can be accessed as 'comp', for storing component assignment
  * - TS can be accessed as 'vertex', for storing components lists

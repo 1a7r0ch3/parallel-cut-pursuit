@@ -35,8 +35,8 @@ class Pfdr_d1_lsx : public Pfdr_d1<real_t, vertex_t>
 public:
     /**  constructor, destructor  **/
 
-    Pfdr_d1_lsx(vertex_t V, size_t D, size_t E, const vertex_t* edges,
-        real_t loss, const real_t* Y, const real_t* d1_coor_weights = nullptr);
+    Pfdr_d1_lsx(vertex_t V, size_t E, const vertex_t* edges, real_t loss,
+        size_t D, const real_t* Y, const real_t* d1_coor_weights = nullptr);
 
     /* the destructor does not free pointers which are supposed to be provided 
      * by the user (adjacency graph structure given at construction, 
@@ -48,7 +48,7 @@ public:
 
     /**  methods for manipulating parameters  **/
  
-    void initialize_iterate(); // specialization, initialize on simplex based on Y
+    void initialize_iterate() override; // initialize on simplex based on Y
 
     /* warning: the first parameter loss can only be used to change the 
      * smoothing parameter of a Kullback-Leibler loss; for changing from one
@@ -101,22 +101,22 @@ private:
     /**  specialization of base virtual methods  **/
 
     /* hessian of separable loss */
-    void compute_hess_f();
+    void compute_hess_f() override;
 
     /* compute Lipschitz metric of quadratic functional */
-    void compute_lipschitz_metric();
+    void compute_lipschitz_metric() override;
 
     /* compute the gradient of the separable functional in Pfdr::Ga_grad_f */
-    void compute_Ga_grad_f();
+    void compute_Ga_grad_f() override;
 
-    void compute_prox_Ga_h(); // backward step over iterate X
+    void compute_prox_Ga_h() override; // backward step over iterate X
 
-    real_t compute_f(); // separable loss
+    real_t compute_f() override; // separable loss
 
-    void preconditioning(bool init); // specifalization adding precomputations
+    void preconditioning(bool init) override; // add some precomputations
 
     /* relative iterate evolution in l1 norm and components saturation */
-    real_t compute_evolution();
+    real_t compute_evolution() override;
 
     /**  type resolution for base template class members  **/
     using Pfdr_d1<real_t, vertex_t>::V;

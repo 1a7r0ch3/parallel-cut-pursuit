@@ -39,13 +39,13 @@ public:
 
     /**  constructor, destructor  **/
 
-    Pfdr(index_t size, size_t D, size_t aux_size, const index_t* aux_idx,
+    Pfdr(index_t size, size_t aux_size, const index_t* aux_idx, size_t D,
         Condshape gashape = MULTIDIM, Condshape wshape = MULTIDIM);
 
     /* delegation for monodimensional setting */
     Pfdr(index_t size, size_t aux_size, const index_t* aux_idx,
         Condshape gashape = MONODIM, Condshape wshape = MONODIM) : 
-        Pfdr(size, 1, aux_size, aux_idx, gashape, wshape){};
+        Pfdr(size, aux_size, aux_idx, 1, gashape, wshape){};
 
     /* the destructor does not free pointers which are supposed to be provided 
      * by the user (monitoring arrays, etc.); it does free the rest (iterate, 
@@ -169,11 +169,11 @@ protected:
 
     /* compute preconditioning or reconditioning;
      * used also to allocate and initialize arrays */
-    void preconditioning(bool init = false);
+    void preconditioning(bool init = false) override;
 
-    void main_iteration();
+    void main_iteration() override;
 
-    real_t compute_objective();
+    real_t compute_objective() override;
 
     /**  type resolution for base template class members  **/
     using Pcd_prox<real_t>::X;

@@ -18,10 +18,10 @@
 using namespace std;
 
 template <typename real_t, typename vertex_t>
-Pfdr_d1_lsx<real_t, vertex_t>::Pfdr_d1_lsx(vertex_t V, size_t D, size_t E,
-    const vertex_t* edges, real_t loss, const real_t* Y,
+Pfdr_d1_lsx<real_t, vertex_t>::Pfdr_d1_lsx(vertex_t V, size_t E,
+    const vertex_t* edges, real_t loss, size_t D, const real_t* Y,
     const real_t* d1_coor_weights) :
-    Pfdr_d1<real_t, vertex_t>(V, D, E, edges, D11, d1_coor_weights, 
+    Pfdr_d1<real_t, vertex_t>(V, E, edges, D, D11, d1_coor_weights, 
         loss == LINEAR ? NULH : loss == QUADRATIC ? MONODIM : MULTIDIM),
     loss(loss), Y(Y)
 {

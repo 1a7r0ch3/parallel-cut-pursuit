@@ -52,15 +52,15 @@ public:
     /**  constructor, destructor  **/
 
     /* only creates BK graph structure and assign Y, D */
-    Cp_d1_lsx(index_t V, size_t D, index_t E, const index_t* first_edge,
-        const index_t* adj_vertices, const real_t* Y);
+    Cp_d1_lsx(index_t V, index_t E, const index_t* first_edge,
+        const index_t* adj_vertices, size_t D, const real_t* Y);
 
     /* the destructor does not free pointers which are supposed to be provided 
      * by the user (forward-star graph structure given at construction, 
-     * monitoring arrays, observation arrays); it does free the rest 
-     * (components assignment and reduced problem elements, etc.), but this can 
-     * be prevented by copying the corresponding pointer member and set it to 
-     * null before deleting */
+     * monitoring arrays, observation arrays); IT DOES FREE THE REST 
+     * (components assignment and reduced problem elements, etc.), but this can
+     * be prevented by getting the corresponding pointer member and setting it
+     * to null beforehand */
 
     /**  methods for manipulating parameters  **/
 
@@ -119,23 +119,24 @@ private:
 
     /**  methods  **/
 
-    /* solve unidimensional loss problem on simplex; in this specialization,
-     * will always be called with component 0 containing full graph */
-    void solve_univertex_problem(real_t* uX, comp_t rv = 0);
+    /* allocate and compute reduced values;
+     * do nothing if the array of reduced values is not null */
+    void solve_reduced_problem() override;
 
-    void solve_reduced_problem();
-
-    index_t split();
+    index_t split() override;
 
     /* relative iterate evolution in l1 norm and components saturation */
-    real_t compute_evolution(const bool compute_dif, comp_t & saturation);
+    real_t compute_evolution(bool compute_dif, comp_t & saturation) override;
 
-    real_t compute_objective();
+    real_t compute_objective() override;
 
     /**  type resolution for base template class members  **/
-    using Cp_d1<real_t, index_t, comp_t>::compute_graph_d1;
-    using Cp_d1<real_t, index_t, comp_t>::coor_weights;
     using Cp_d1<real_t, index_t, comp_t>::D11;
+    using Cp_d1<real_t, index_t, comp_t>::D;
+    using Cp_d1<real_t, index_t, comp_t>::rX;
+    using Cp_d1<real_t, index_t, comp_t>::last_rX;
+    using Cp_d1<real_t, index_t, comp_t>::coor_weights;
+    using Cp_d1<real_t, index_t, comp_t>::compute_graph_d1;
     using Cp<real_t, index_t, comp_t>::monitor_evolution;
     using Cp<real_t, index_t, comp_t>::set_saturation;
     using Cp<real_t, index_t, comp_t>::is_saturated;
@@ -149,7 +150,6 @@ private:
     using Cp<real_t, index_t, comp_t>::get_parallel_flow_graph;
     using Cp<real_t, index_t, comp_t>::eps;
     using Cp<real_t, index_t, comp_t>::V;
-    using Cp<real_t, index_t, comp_t>::D;
     using Cp<real_t, index_t, comp_t>::E;
     using Cp<real_t, index_t, comp_t>::first_edge;
     using Cp<real_t, index_t, comp_t>::adj_vertices; 
@@ -158,8 +158,6 @@ private:
     using Cp<real_t, index_t, comp_t>::rV;
     using Cp<real_t, index_t, comp_t>::rE;
     using Cp<real_t, index_t, comp_t>::comp_assign;
-    using Cp<real_t, index_t, comp_t>::rX;
-    using Cp<real_t, index_t, comp_t>::last_rX;
     using Cp<real_t, index_t, comp_t>::comp_list;
     using Cp<real_t, index_t, comp_t>::first_vertex;
     using Cp<real_t, index_t, comp_t>::reduced_edges;

@@ -22,10 +22,10 @@
 using namespace std;
 
 template <typename real_t, typename vertex_t>
-Pfdr_d1<real_t, vertex_t>::Pfdr_d1(vertex_t V, size_t D, size_t E,
-    const vertex_t* edges, D1p d1p, const real_t* coor_weights,
+Pfdr_d1<real_t, vertex_t>::Pfdr_d1(vertex_t V, size_t E,
+    const vertex_t* edges, size_t D, D1p d1p, const real_t* coor_weights,
     Condshape hess_f_h_shape) :
-    Pfdr<real_t, vertex_t>(V, D, 2*E, edges,
+    Pfdr<real_t, vertex_t>(V, 2*E, edges, D,
         compute_ga_shape(coor_weights, hess_f_h_shape),
         compute_w_shape(d1p, coor_weights, hess_f_h_shape)),
     E(E), d1p(d1p), coor_weights(coor_weights),

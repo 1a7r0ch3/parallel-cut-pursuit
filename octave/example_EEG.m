@@ -10,8 +10,9 @@ cd(fileparts(which('example_EEG.m')));
 addpath(genpath('./bin/'));
 
 %%%  general parameters  %%%
-printResults = false; % requires color encapsulated postscript driver on your system
-                     % be sure to run octave 4.2.2 or later, fixing a bug in trisurf
+printResults = false; % requires color encapsulated postscript driver on your
+                      % system; be sure to run octave 4.2.2 or later, fixing a
+                      % bug in trisurf
 
 % parameters for colormap
 numberOfColors = 256;

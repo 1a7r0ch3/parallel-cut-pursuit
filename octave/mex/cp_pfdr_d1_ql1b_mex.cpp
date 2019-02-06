@@ -132,7 +132,8 @@ static void cp_pfdr_d1_ql1b_mex(int nlhs, mxArray **plhs, int nrhs, \
     real_t pfdr_rho = (nrhs > 11) ? mxGetScalar(prhs[11]) : 1.0;
     real_t pfdr_cond_min = (nrhs > 12) ? mxGetScalar(prhs[12]) : 1e-2;
     real_t pfdr_dif_rcd = (nrhs > 13) ? mxGetScalar(prhs[13]) : 0.0;
-    real_t pfdr_dif_tol = (nrhs > 14) ? mxGetScalar(prhs[14]) : 1e-3*cp_dif_tol;
+    real_t pfdr_dif_tol = (nrhs > 14) ?
+        mxGetScalar(prhs[14]) : 1e-3*cp_dif_tol;
     int pfdr_it_max = (nrhs > 15) ? mxGetScalar(prhs[15]) : 1e4;
     int verbose = (nrhs > 16) ? mxGetScalar(prhs[16]) : 1e3;
 
@@ -145,7 +146,7 @@ static void cp_pfdr_d1_ql1b_mex(int nlhs, mxArray **plhs, int nrhs, \
     double *Time = nullptr;
     real_t *Obj = nullptr;
     if (nlhs > 3){
-        plhs[3] = mxCreateNumericMatrix(1, cp_it_max + 1, mxREAL_CLASS, mxREAL);
+        plhs[3] = mxCreateNumericMatrix(1, cp_it_max+1, mxREAL_CLASS, mxREAL);
         Obj = (real_t*) mxGetData(plhs[3]);
     }
     if (nlhs > 4){
@@ -162,7 +163,7 @@ static void cp_pfdr_d1_ql1b_mex(int nlhs, mxArray **plhs, int nrhs, \
     /**  cut-pursuit with preconditioned forward-Douglas-Rachford  **/
 
     Cp_d1_ql1b<real_t, index_t, comp_t> *cp =
-        new Cp_d1_ql1b<real_t, index_t, comp_t>(V, E, first_edge, adj_vertices);
+       new Cp_d1_ql1b<real_t, index_t, comp_t>(V, E, first_edge, adj_vertices);
 
     cp->set_edge_weights(edge_weights, homo_edge_weight);
     cp->set_quadratic(Y, N, A, a);

@@ -157,28 +157,28 @@ private:
     /**  specialization of base virtual methods  **/
 
     /* approximate diagonal hessian of quadratic functional */
-    void compute_hess_f();
+    void compute_hess_f() override;
 
     /* l1 contribution */
-    void add_pseudo_hess_h();
+    void add_pseudo_hess_h() override;
 
     /* compute Lipschitz metric of quadratic functional */
-    void compute_lipschitz_metric();
+    void compute_lipschitz_metric() override;
 
     /* compute the gradient of the quadratic functional in Pfdr::Ga_grad_f */
-    void compute_Ga_grad_f(); // assume apply_A() have been called
+    void compute_Ga_grad_f() override; // assume apply_A() have been called
 
-    void compute_prox_Ga_h(); // backward step over iterate X
+    void compute_prox_Ga_h() override; // backward step over iterate X
 
     /* quadratic functional; in the precomputed A^t A version, 
      * a constant 1/2||Y||^2 is omited */
-    real_t compute_f(); 
+    real_t compute_f() override; 
 
-    real_t compute_h(); // l1 norm
+    real_t compute_h() override; // l1 norm
 
-    void preconditioning(bool init); // specialization adding precomputations
+    void preconditioning(bool init) override; // add some precomputations
 
-    void main_iteration(); // specialization adding application of A
+    void main_iteration() override; // add application of matrix A
 
     /**  type resolution for base template class members  **/
     using Pfdr_d1<real_t, vertex_t>::V;

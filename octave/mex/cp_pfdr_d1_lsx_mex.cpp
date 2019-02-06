@@ -1,8 +1,8 @@
 /*=============================================================================
  * [Comp, rX, it, Obj, Time, Dif] = cp_pfdr_d1_lsx_mex(loss, Y, first_edge,
  *      adj_vertices, edge_weights = 1.0, loss_weights = [],
- *      d1_coor_weights = [], cp_dif_tol = 1e-3, cp_it_max = 10, pfdr_rho = 1.0,
- *      pfdr_cond_min = 1e-2, pfdr_dif_rcd = 0.0,
+ *      d1_coor_weights = [], cp_dif_tol = 1e-3, cp_it_max = 10,
+ *      pfdr_rho = 1.0, pfdr_cond_min = 1e-2, pfdr_dif_rcd = 0.0,
  *      pfdr_dif_tol = 1e-3*cp_dif_tol, pfdr_it_max = 1e4, verbose = 1e2)
  * 
  *  Hugo Raguet 2016, 2018
@@ -127,7 +127,7 @@ static void cp_pfdr_d1_lsx_mex(int nlhs, mxArray **plhs, int nrhs, \
 
     Cp_d1_lsx<real_t, index_t, comp_t> *cp =
         new Cp_d1_lsx<real_t, index_t, comp_t>
-            (V, D, E, first_edge, adj_vertices, Y);
+            (V, E, first_edge, adj_vertices, D, Y);
 
     cp->set_loss(loss, Y, loss_weights);
     cp->set_edge_weights(edge_weights, homo_edge_weight, d1_coor_weights);
@@ -153,10 +153,12 @@ static void cp_pfdr_d1_lsx_mex(int nlhs, mxArray **plhs, int nrhs, \
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 { 
     if (mxIsDouble(prhs[1])){
-        check_args(nrhs, prhs, args_real_t, n_real_t, mxDOUBLE_CLASS, "double");
+        check_args(nrhs, prhs, args_real_t, n_real_t, mxDOUBLE_CLASS,
+            "double");
         cp_pfdr_d1_lsx_mex<double>(nlhs, plhs, nrhs, prhs);
     }else{
-        check_args(nrhs, prhs, args_real_t, n_real_t, mxSINGLE_CLASS, "single");
+        check_args(nrhs, prhs, args_real_t, n_real_t, mxSINGLE_CLASS,
+            "single");
         cp_pfdr_d1_lsx_mex<float>(nlhs, plhs, nrhs, prhs);
     }
 }

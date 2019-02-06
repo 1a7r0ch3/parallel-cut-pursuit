@@ -66,14 +66,14 @@ public:
      *
      * note that the last three configurations resort to additional
      * auxiliary variables and weights Z_Id and Id_W (only for D > 1) */
-    Pfdr_d1(vertex_t V, size_t D, size_t E, const vertex_t* edges,
+    Pfdr_d1(vertex_t V, size_t E, const vertex_t* edges, size_t D,
         D1p d1p = D12, const real_t* coor_weights = nullptr,
         Condshape hess_f_h_shape = MULTIDIM);
 
     /* delegation for monodimensional setting */
     Pfdr_d1(vertex_t V, size_t E, const vertex_t* edges,
         Condshape hess_f_h_shape = MONODIM) :
-        Pfdr_d1(V, 1, E, edges, D11, nullptr, hess_f_h_shape){};
+        Pfdr_d1(V, E, edges, 1, D11, nullptr, hess_f_h_shape){};
 
     /* the destructor does not free pointers which are supposed to be provided 
      * by the user (adjacency graph structure, monitoring arrays, etc.); it 

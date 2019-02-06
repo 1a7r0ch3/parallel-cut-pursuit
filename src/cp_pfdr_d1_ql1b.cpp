@@ -20,8 +20,8 @@ using namespace std;
 
 template <typename real_t, typename index_t, typename comp_t>
 Cp_d1_ql1b<real_t, index_t, comp_t>::Cp_d1_ql1b(index_t V, index_t E,
-    const index_t* first_edge, const index_t* adj_vertices)
-    : Cp_d1<real_t, index_t, comp_t>(V, E, first_edge, adj_vertices)
+    const index_t* first_edge, const index_t* adj_vertices) :
+    Cp_d1<real_t, index_t, comp_t>(V, E, first_edge, adj_vertices)
 {
     /* ensure handling of infinite values (negation, comparisons) is safe */
     static_assert(numeric_limits<real_t>::is_iec559,
@@ -37,8 +37,8 @@ Cp_d1_ql1b<real_t, index_t, comp_t>::Cp_d1_ql1b(index_t V, index_t E,
     pfdr_dif_tol = 1e-3*dif_tol; pfdr_it = pfdr_it_max = 1e4;
 
     /* it makes sense to consider nonevolving components as saturated;
-     * beware of coupling when using complicated operator A: precision can be
-     * increased by decreasing dif_tol if necessary */
+     * beware of coupling when using complicated operator A though,
+     * precision can be increased by decreasing dif_tol if necessary */
     monitor_evolution = true;
 }
 
@@ -96,119 +96,18 @@ void Cp_d1_ql1b<real_t, index_t, comp_t>::set_pfdr_param(real_t rho,
     this->pfdr_dif_tol = dif_tol;
 }
 
-/* solve unidimensional quadratic + l1 problem; in this version, will always be
- * called with component 0 containing full graph; NOTA: if Yl1 is not constant,
- * this methods solves only an approximation, replacing the weighted sum of
- * distances to Yl1 by the distance to the weighted median of Yl1 */
-template <typename real_t, typename index_t, typename comp_t>
-void Cp_d1_ql1b<real_t, index_t, comp_t>::solve_univertex_problem(real_t* uX,
-    comp_t rv)
-{
-    real_t y = ZERO; /* will contain <A1|Y> */
-    real_t aa = ZERO; /* will contain ||A1||^2 */
-    real_t* rA; /* reduced matrix; sum the columns of A */
-
-    /* elements for least square solution */
-    if (!IS_ATA(N)){ /* direct matricial case */
-        rA = (real_t*) malloc_check(sizeof(real_t)*N);
-        #pragma omp parallel for schedule(static) NUM_THREADS(N*V, N)
-        for (size_t n = 0; n < N; n++){
-            rA[n] = ZERO;
-            size_t i = n;
-            for (index_t v = 0; v < V; v++){
-                rA[n] += A[i];
-                i += N;
-            }
-        }
-        #pragma omp parallel for reduction(+:y, aa) schedule(static) \
-            NUM_THREADS(2*N, N)
-        for (size_t n = 0; n < N; n++){
-            y += rA[n]*Y_(n);
-            aa += rA[n]*rA[n];
-        }
-    }else if (A || a){ /* premultiplied by A^t */
-        if (Y){
-            #pragma omp parallel for reduction(+:y) schedule(static) \
-                NUM_THREADS(V)
-            for (index_t v = 0; v < V; v++){ y += Y[v]; }
-        }
-        if (N == FULL_ATA){ /* full matrix */
-            #pragma omp parallel for reduction(+:aa) schedule(static) \
-                NUM_THREADS(V*V, V)
-            for (index_t u = 0; u < V; u++){
-                const real_t *Au = A + (size_t) V*u;
-                for (index_t v = 0; v < V; v++){ aa += Au[v]; }
-            }
-        }else if (A){ /* diagonal matrix */
-            #pragma omp parallel for reduction(+:aa) schedule(static) \
-                NUM_THREADS(V)
-            for (index_t v = 0; v < V; v++){ aa += A[v]; }
-        }else if (a){ /* identity matrix */
-            aa = V;
-        }
-    }
-
-    /* aggregated l1 weights and weighted median */
-    real_t yl1 = ZERO, wl1 = ZERO;
-    if (l1_weights){
-        #pragma omp parallel for reduction(+:wl1) schedule(static) \
-            NUM_THREADS(V)
-        for (index_t v = 0; v < V; v++){ wl1 += l1_weights[v]; }
-        if (Yl1){
-            yl1 = wth_element(comp_list, Yl1, V, (double) HALF*wl1, l1_weights);
-            set_saturation(0, false); // saturation is flagged on first vertex
-        }
-    }else if (homo_l1_weight){ /* homogeneous weights */
-        wl1 = V*homo_l1_weight;
-        if (Yl1){
-            yl1 = nth_element_idx(comp_list, Yl1, V, V/2);
-        }
-    }
-
-    /* solution of least-square + l1 */
-    if (y - wl1 > aa*yl1){ *uX = (y - wl1)/aa;  }
-    else if (y + wl1 < aa*yl1){ *uX = (y + wl1)/aa; }
-    else{ *uX = yl1; }
-
-    /* aggregated lower bounds and proj */
-    real_t low = -INF_REAL; 
-    if (low_bnd){
-        #pragma omp parallel for reduction(max:low) schedule(static) \
-            NUM_THREADS(V)
-        for (index_t v = 0; v < V; v++){
-            if (low < low_bnd[v]){ low = low_bnd[v]; }
-        }
-    }else{ /* homogeneous bounds */
-        low = homo_low_bnd;
-    }
-    if (*uX < low){ *uX = low; }
-
-    /* aggregated upper bounds and proj */
-    real_t upp = INF_REAL; 
-    if (upp_bnd){
-        #pragma omp parallel for reduction(min:upp) schedule(static) \
-            NUM_THREADS(V)
-        for (index_t v = 0; v < V; v++){
-            if (upp > upp_bnd[v]){ upp = upp_bnd[v]; }
-        }
-    }else{ /* homogeneous bounds */
-        upp = homo_upp_bnd;
-    }
-    if (*uX > upp){ *uX = upp; }
-
-    if (!IS_ATA(N)){ /* direct matricial case, compute residual R = Y - A X */
-        #pragma omp parallel for schedule(static) NUM_THREADS(N)
-        for (size_t n = 0; n < N; n++){ R[n] = Y_(n) - rA[n]*(*uX); }
-        free(rA);
-    }
-}
-
 template <typename real_t, typename index_t, typename comp_t>
 void Cp_d1_ql1b<real_t, index_t, comp_t>::solve_reduced_problem()
 /* NOTA: if Yl1 is not constant, this solves only an approximation, replacing
  * the weighted sum of distances to Yl1 by the distance to the weighted median
  * of Yl1 */
 {
+    if (rX){
+        return;
+    }else{
+        rX = (real_t*) malloc_check(sizeof(real_t)*rV);
+    }
+
     /**  compute reduced matrix  **/
     real_t *rY, *rA, *rAA; // reduced observations, matrix, etc.
     rY = rA = rAA = nullptr;
@@ -221,7 +120,7 @@ void Cp_d1_ql1b<real_t, index_t, comp_t>::solve_reduced_problem()
      *     + compute symmetrized reduced matrix: N rV^2
      *     + one matrix-vector mult. per pfdr iter. : rV^2 i
      * conclusion: premultiplication if rV < (2 N i)/(N + i) */
-    size_t rN = !IS_ATA(rN) && rV < (2*N*pfdr_it)/(N + pfdr_it) ? FULL_ATA : N;
+    size_t rN = !IS_ATA(N) && rV < (2*N*pfdr_it)/(N + pfdr_it) ? FULL_ATA : N;
 
     if (IS_ATA(rN)){ /* reduced problem premultiplied by rA^t */
         if (Y){ rY = (real_t*) malloc_check(sizeof(real_t)*rV); }
@@ -256,7 +155,9 @@ void Cp_d1_ql1b<real_t, index_t, comp_t>::solve_reduced_problem()
                 for (comp_t rv = 0; rv <= ru; rv++){
                     real_t *rAv = rA + N*rv; // rv-th column of rA
                     rAAu[rv] = ZERO;
-                    for (size_t n = 0; n < N; n++){ rAAu[rv] += rAu[n]*rAv[n]; }
+                    for (size_t n = 0; n < N; n++){
+                        rAAu[rv] += rAu[n]*rAv[n];
+                    }
                 }
             }
             if (Y){ /* correlation with observation Y */
@@ -369,7 +270,9 @@ void Cp_d1_ql1b<real_t, index_t, comp_t>::solve_reduced_problem()
                         /* weighted median is the first to reach wrk */
                         real_t wsum = ZERO;
                         index_t i = first_vertex[rv];
-                        while ((wsum += l1_weights[comp_list[i]]) < wrk){ i++; }
+                        while ((wsum += l1_weights[comp_list[i]]) < wrk){
+                            i++;
+                        }
                         rYl1[rv] = Yl1[comp_list[i]];
                     }else{
                         rYl1[rv] = wth_element(comp_list + first_vertex[rv],
@@ -389,8 +292,9 @@ void Cp_d1_ql1b<real_t, index_t, comp_t>::solve_reduced_problem()
                         rYl1[rv] = Yl1[comp_list[first_vertex[rv] +
                             (first_vertex[rv + 1] - first_vertex[rv])/2]];
                     }else{
-                        rYl1[rv] = nth_element_idx(comp_list + first_vertex[rv],
-                            Yl1, first_vertex[rv + 1] - first_vertex[rv],
+                        rYl1[rv] = nth_element_idx(
+                            comp_list + first_vertex[rv], Yl1,
+                            first_vertex[rv + 1] - first_vertex[rv],
                             (first_vertex[rv + 1] - first_vertex[rv])/2);
                         /* saturation is flagged on first vertex */
                         set_saturation(rv, false);
@@ -421,27 +325,43 @@ void Cp_d1_ql1b<real_t, index_t, comp_t>::solve_reduced_problem()
         }
     }
 
-    /**  preconditioned forward-Douglas-Rachford  **/
-    Pfdr_d1_ql1b<real_t, comp_t> *pfdr =
-        new Pfdr_d1_ql1b<real_t, comp_t>(rV, rE, reduced_edges);
+    if (rV == 1){ /**  single connected component  **/
 
-    pfdr->set_edge_weights(reduced_edge_weights);
-    if (IS_ATA(rN)){ pfdr->set_quadratic(rY, rN, rAA, a); }
-    else{ pfdr->set_quadratic(Y, N, rA); }
-    pfdr->set_l1(rl1_weights, ZERO, rYl1);
-    pfdr->set_bounds(rlow_bnd, homo_low_bnd, rupp_bnd, homo_upp_bnd);
-    pfdr->set_conditioning_param(pfdr_cond_min, pfdr_dif_rcd);
-    pfdr->set_relaxation(pfdr_rho);
-    pfdr->set_algo_param(pfdr_dif_tol, pfdr_it_max, verbose);
+        /* solution of least-square + l1 */
+        real_t wl1 = rl1_weights ? *rl1_weights : ZERO;
+        real_t yl1 = rYl1 ? *rYl1 : ZERO;
+        if (*rY - wl1 > (*rAA)*yl1){ *rX = (*rY - wl1)/(*rAA); }
+        else if (*rY + wl1 < (*rAA)*yl1){ *rX = (*rY + wl1)/(*rAA); }
+        else{ *rX = yl1; }
 
-    rX = (real_t*) malloc_check(sizeof(real_t)*rV);
-    pfdr->set_iterate(rX);
-    pfdr->initialize_iterate();
+        /* aggregated lower bounds and proj */
+        real_t low = low_bnd ? *rlow_bnd : homo_low_bnd;
+        real_t upp = upp_bnd ? *rupp_bnd : homo_upp_bnd;
+        if (*rX < low){ *rX = low; }
+        if (*rX > upp){ *rX = upp; }
 
-    pfdr_it = pfdr->precond_proximal_splitting();
+    }else{ /**  preconditioned forward-Douglas-Rachford  **/
 
-    pfdr->set_iterate(nullptr); // prevent rX to be free()'d
-    delete pfdr;
+        Pfdr_d1_ql1b<real_t, comp_t> *pfdr =
+            new Pfdr_d1_ql1b<real_t, comp_t>(rV, rE, reduced_edges);
+
+        pfdr->set_edge_weights(reduced_edge_weights);
+        if (IS_ATA(rN)){ pfdr->set_quadratic(rY, rN, rAA, a); }
+        else{ pfdr->set_quadratic(Y, N, rA); }
+        pfdr->set_l1(rl1_weights, ZERO, rYl1);
+        pfdr->set_bounds(rlow_bnd, homo_low_bnd, rupp_bnd, homo_upp_bnd);
+        pfdr->set_conditioning_param(pfdr_cond_min, pfdr_dif_rcd);
+        pfdr->set_relaxation(pfdr_rho);
+        pfdr->set_algo_param(pfdr_dif_tol, pfdr_it_max, verbose);
+        pfdr->set_iterate(rX);
+        pfdr->initialize_iterate();
+
+        pfdr_it = pfdr->precond_proximal_splitting();
+
+        pfdr->set_iterate(nullptr); // prevent rX to be free()'d
+        delete pfdr;
+
+    }
 
     if (!IS_ATA(N)){ /* direct matricial case, compute residual R = Y - A X */
         #pragma omp parallel for schedule(static) NUM_THREADS(N*rV, N)
@@ -663,8 +583,8 @@ index_t Cp_d1_ql1b<real_t, index_t, comp_t>::split()
 }
 
 template <typename real_t, typename index_t, typename comp_t>
-real_t Cp_d1_ql1b<real_t, index_t, comp_t>::compute_evolution(
-    const bool compute_dif, comp_t & saturation)
+real_t Cp_d1_ql1b<real_t, index_t, comp_t>::compute_evolution(bool compute_dif,
+    comp_t & saturation)
 {
     comp_t num_ops = compute_dif ? V : saturation;
     real_t dif = ZERO, amp = ZERO;
@@ -788,9 +708,6 @@ real_t Cp_d1_ql1b<real_t, index_t, comp_t>::compute_objective()
 
 /* instantiate for compilation */
 template class Cp_d1_ql1b<double, uint32_t, uint16_t>;
-
 template class Cp_d1_ql1b<float, uint32_t, uint16_t>;
-
 template class Cp_d1_ql1b<double, uint32_t, uint32_t>;
-
 template class Cp_d1_ql1b<float, uint32_t, uint32_t>;
