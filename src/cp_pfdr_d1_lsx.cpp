@@ -14,10 +14,12 @@
 #define LOSS_WEIGHTS_(v) (loss_weights ? loss_weights[(v)] : ONE)
 #define COOR_WEIGHTS_(d) (coor_weights ? coor_weights[(d)] : ONE)
 
+#define TPL template <typename real_t, typename index_t, typename comp_t>
+#define CP_D1_LSX Cp_d1_lsx<real_t, index_t, comp_t>
+
 using namespace std;
 
-template <typename real_t, typename index_t, typename comp_t>
-Cp_d1_lsx<real_t, index_t, comp_t>::Cp_d1_lsx(index_t V, index_t E,
+TPL CP_D1_LSX::Cp_d1_lsx(index_t V, index_t E,
     const index_t* first_edge, const index_t* adj_vertices, size_t D,
     const real_t* Y) :
     Cp_d1<real_t, index_t, comp_t>(V, E, first_edge, adj_vertices, D, D11),
@@ -27,9 +29,9 @@ Cp_d1_lsx<real_t, index_t, comp_t>::Cp_d1_lsx(index_t V, index_t E,
     static_assert(numeric_limits<real_t>::is_iec559,
         "Cut-pursuit d1 loss simplex: real_t must satisfy IEEE 754.");
 
-    if (D > numeric_limits<comp_t>::max()){
+    if (numeric_limits<comp_t>::max() < D - 1){
         cerr << "Cut-pursuit d1 loss simplex: comp_t must be able to "
-            "represent the dimension D (" << D << ")." << endl;
+            "represent one less than the dimension (" << D - 1 << ")." << endl;
         exit(EXIT_FAILURE);
     }
 
@@ -44,9 +46,8 @@ Cp_d1_lsx<real_t, index_t, comp_t>::Cp_d1_lsx(index_t V, index_t E,
     monitor_evolution = true;
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-void Cp_d1_lsx<real_t, index_t, comp_t>::set_loss(real_t loss,
-    const real_t* Y, const real_t* loss_weights)
+TPL void CP_D1_LSX::set_loss(real_t loss, const real_t* Y,
+    const real_t* loss_weights)
 {
     if (loss < ZERO || loss > ONE){
         cerr << "Cut-pursuit d1 loss simplex: loss parameter should be between"
@@ -58,9 +59,8 @@ void Cp_d1_lsx<real_t, index_t, comp_t>::set_loss(real_t loss,
     this->loss_weights = loss_weights; 
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-void Cp_d1_lsx<real_t, index_t, comp_t>::set_pfdr_param(real_t rho,
-    real_t cond_min, real_t dif_rcd, int it_max, real_t dif_tol)
+TPL void CP_D1_LSX::set_pfdr_param(real_t rho, real_t cond_min, real_t dif_rcd,
+    int it_max, real_t dif_tol)
 {
     this->pfdr_rho = rho;
     this->pfdr_cond_min = cond_min;
@@ -69,8 +69,7 @@ void Cp_d1_lsx<real_t, index_t, comp_t>::set_pfdr_param(real_t rho,
     this->pfdr_dif_tol = dif_tol;
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-void Cp_d1_lsx<real_t, index_t, comp_t>::solve_reduced_problem()
+TPL void CP_D1_LSX::solve_reduced_problem()
 {
     if (rX){
         return;
@@ -143,8 +142,7 @@ void Cp_d1_lsx<real_t, index_t, comp_t>::solve_reduced_problem()
     }
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-index_t Cp_d1_lsx<real_t, index_t, comp_t>::split()
+TPL index_t CP_D1_LSX::split()
 {
     index_t activation = 0;
     real_t *grad = (real_t*) malloc_check(sizeof(real_t)*D*V);
@@ -188,10 +186,10 @@ index_t Cp_d1_lsx<real_t, index_t, comp_t>::split()
     }
 
     /**  directions are searched in the set \prod_v Dv, where for each vertex,
-     **  Dv = {1d - 1dmv in R^D | d in {1,...,D}}, with dmv in argmax_d' {x_vd'}
-     **  that is to say dmv is a coordinate with maximum value, and it is tested
-     **  against all alternative coordinates; an approximate solution is
-     **  searched with one alpha-expansion cycle **/
+     * Dv = {1d - 1dmv in R^D | d in {1,...,D}}, with dmv in argmax_d' {x_vd'}
+     * that is to say dmv is a coordinate with maximum value, and it is tested
+     * against all alternative coordinates; an approximate solution is
+     * searched with one alpha-expansion cycle  **/
 
     /* best ascent coordinates stored temporarily in array 'comp_assign' */
     comp_t* pref_d = comp_assign;
@@ -236,13 +234,14 @@ index_t Cp_d1_lsx<real_t, index_t, comp_t>::split()
             }
 
             /* set d1 edge capacities within each component;
-            * strictly speaking, active edges should not be directly ignored,
-            * because as mentioned above, _some_ neighboring coordinates can still
-            * be equal, yielding nondifferentiability and thus corresponding to
-            * positive capacities; however, such capacities are somewhat cumbersome
-            * to compute, and more importantly max flows cannot be easily computed
-            * in parallel, since the components would not be independent anymore;
-            * we thus stick with the current heuristic for now */
+             * strictly speaking, active edges should not be directly ignored,
+             * because as mentioned above, _some_ neighboring coordinates can
+             * still be equal, yielding nondifferentiability and thus
+             * corresponding to positive capacities; however, such capacities
+             * are somewhat cumbersome to compute, and more importantly max
+             * flows cannot be easily computed in parallel, since the
+             * components would not be independent anymore;
+             * we thus stick with the current heuristic for now */
             for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
                 index_t u = comp_list[i];
                 for (index_t e = first_edge[u]; e < first_edge[u + 1]; e++){
@@ -321,9 +320,7 @@ index_t Cp_d1_lsx<real_t, index_t, comp_t>::split()
     return activation;
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-real_t Cp_d1_lsx<real_t, index_t, comp_t>::compute_evolution(bool compute_dif,
-    comp_t & saturation)
+TPL real_t CP_D1_LSX::compute_evolution(bool compute_dif, comp_t & saturation)
 {
     comp_t num_ops = compute_dif ? V*D : saturation*D;
     real_t dif = ZERO;
@@ -352,8 +349,7 @@ real_t Cp_d1_lsx<real_t, index_t, comp_t>::compute_evolution(bool compute_dif,
     return compute_dif ? dif/V : ZERO;
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-real_t Cp_d1_lsx<real_t, index_t, comp_t>::compute_objective()
+TPL real_t CP_D1_LSX::compute_objective()
 /* unfortunately, at this point one does not have access to the reduced objects
  * computed in the routine solve_reduced_problem() */
 {

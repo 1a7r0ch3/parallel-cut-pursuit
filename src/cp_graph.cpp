@@ -3,13 +3,14 @@
 #include <iostream>
 #include "../include/cp_graph.hpp"
 
+#define TPL template <typename real_t, typename index_t, typename comp_t>
+#define CP_GRAPH Cp_graph<real_t, index_t, comp_t>
+
 using namespace std;
 
-template <typename real_t, typename index_t, typename comp_t>
-Cp_graph<real_t, index_t, comp_t>::Cp_graph(index_t node_num_max,
-    index_t edge_num_max) : node_num(0), nodeptr_block(nullptr),
-    terminal(&reserved_terminal_arc), orphan(&reserved_orphan_arc),
-    is_parallel_copy(false)
+TPL CP_GRAPH::Cp_graph(index_t node_num_max, index_t edge_num_max)
+    : node_num(0), nodeptr_block(nullptr), terminal(&reserved_terminal_arc),
+    orphan(&reserved_orphan_arc), is_parallel_copy(false)
 {
     if (node_num_max < 16) node_num_max = 16;
     if (edge_num_max < 16) edge_num_max = 16;
@@ -31,16 +32,11 @@ Cp_graph<real_t, index_t, comp_t>::Cp_graph(index_t node_num_max,
 	// flow = 0;
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-Cp_graph<real_t, index_t, comp_t>::Cp_graph(
-    const Cp_graph<real_t, index_t, comp_t> & G)
-    : nodes(G.nodes), arcs(G.arcs), node_num(G.node_num),
-      terminal(G.terminal), orphan(G.orphan),
-      nodeptr_block(nullptr), is_parallel_copy(true)
-{}
+TPL CP_GRAPH::Cp_graph(const CP_GRAPH & G) : nodes(G.nodes), arcs(G.arcs),
+    node_num(G.node_num), terminal(G.terminal), orphan(G.orphan),
+    nodeptr_block(nullptr), is_parallel_copy(true){}
 
-template <typename real_t, typename index_t, typename comp_t> 
-	Cp_graph<real_t, index_t, comp_t>::~Cp_graph()
+TPL CP_GRAPH::~Cp_graph()
 {
 	if (nodeptr_block) 
 	{ 

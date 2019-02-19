@@ -181,12 +181,12 @@ private:
     bool is_parallel_copy; // flag a private copy in a parallel thread
 };
 
-///////////////////////////////////////
-// Implementation - inline functions //
-///////////////////////////////////////
+#define TPL template <typename real_t, typename index_t, typename comp_t>
+#define CP_GRAPH Cp_graph<real_t, index_t, comp_t>
 
-template <typename real_t, typename index_t, typename comp_t>
-	inline index_t Cp_graph<real_t, index_t, comp_t>::add_node(index_t num)
+/***  inline methods  ***/
+
+TPL inline index_t CP_GRAPH::add_node(index_t num)
 {
 	if (node_last + num > node_max){
         std::cerr << "Boykov & Kolmogorov graph: "
@@ -205,9 +205,8 @@ template <typename real_t, typename index_t, typename comp_t>
 	return i;
 }
 
-template <typename real_t, typename index_t, typename comp_t> 
-	inline void Cp_graph<real_t, index_t, comp_t>::
-    add_tweights(index_t i, real_t cap_source, real_t cap_sink)
+TPL inline void CP_GRAPH::add_tweights(index_t i, real_t cap_source,
+    real_t cap_sink)
 {
 	real_t delta = nodes[i].tr_cap;
 	if (delta > 0) cap_source += delta;
@@ -216,9 +215,8 @@ template <typename real_t, typename index_t, typename comp_t>
 	nodes[i].tr_cap = cap_source - cap_sink;
 }
 
-template <typename real_t, typename index_t, typename comp_t> 
-	inline void Cp_graph<real_t, index_t, comp_t>::
-    add_edge(index_t _i, index_t _j, real_t cap, real_t rev_cap)
+TPL inline void CP_GRAPH:: add_edge(index_t _i, index_t _j, real_t cap,
+    real_t rev_cap)
 {
 	if (arc_last == arc_max){
         std::cerr << "Boykov & Kolmogorov graph: all " << arc_max - arcs
@@ -244,3 +242,6 @@ template <typename real_t, typename index_t, typename comp_t>
 	a -> r_cap = cap;
 	a_rev -> r_cap = rev_cap;
 }
+
+#undef TPL
+#undef CP_GRAPH

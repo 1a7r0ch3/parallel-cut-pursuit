@@ -15,13 +15,14 @@
 #define LOSS_WEIGHTS_(v) (loss_weights ? loss_weights[(v)] : ONE)
 #define Ga_(v, vd)   (gashape == MONODIM ? Ga[(v)] : Ga[(vd)])
 
+#define TPL template <typename real_t, typename vertex_t>
+#define PFDR_D1_LSX Pfdr_d1_lsx<real_t, vertex_t>
+
 using namespace std;
 
-template <typename real_t, typename vertex_t>
-Pfdr_d1_lsx<real_t, vertex_t>::Pfdr_d1_lsx(vertex_t V, size_t E,
-    const vertex_t* edges, real_t loss, size_t D, const real_t* Y,
-    const real_t* d1_coor_weights) :
-    Pfdr_d1<real_t, vertex_t>(V, E, edges, D, D11, d1_coor_weights, 
+TPL PFDR_D1_LSX::Pfdr_d1_lsx(vertex_t V, size_t E, const vertex_t* edges,
+    real_t loss, size_t D, const real_t* Y, const real_t* d1_coor_weights)
+    : Pfdr_d1<real_t, vertex_t>(V, E, edges, D, D11, d1_coor_weights, 
         loss == LINEAR ? NULH : loss == QUADRATIC ? MONODIM : MULTIDIM),
     loss(loss), Y(Y)
 {
@@ -29,12 +30,10 @@ Pfdr_d1_lsx<real_t, vertex_t>::Pfdr_d1_lsx(vertex_t V, size_t E,
     loss_weights = nullptr;
 }
 
-template <typename real_t, typename vertex_t>
-Pfdr_d1_lsx<real_t, vertex_t>::~Pfdr_d1_lsx(){ free(KL_Ga_Y); }
+TPL PFDR_D1_LSX::~Pfdr_d1_lsx(){ free(KL_Ga_Y); }
 
-template <typename real_t, typename vertex_t>
-void Pfdr_d1_lsx<real_t, vertex_t>::set_loss(real_t loss,
-    const real_t* Y, const real_t* loss_weights)
+TPL void PFDR_D1_LSX::set_loss(real_t loss, const real_t* Y,
+    const real_t* loss_weights)
 {
     if (loss < ZERO || loss > ONE){
         cerr << "PFDR graph d1 loss simplex: loss parameter should be between "
@@ -59,8 +58,7 @@ void Pfdr_d1_lsx<real_t, vertex_t>::set_loss(real_t loss,
     this->loss_weights = loss_weights;
 }
 
-template<typename real_t, typename vertex_t>
-void Pfdr_d1_lsx<real_t, vertex_t>::compute_lipschitz_metric()
+TPL void PFDR_D1_LSX::compute_lipschitz_metric()
 {
     if (loss == LINEAR){
         l = ZERO; lshape = SCALAR;
@@ -85,8 +83,7 @@ void Pfdr_d1_lsx<real_t, vertex_t>::compute_lipschitz_metric()
     }
 }
 
-template<typename real_t, typename vertex_t>
-void Pfdr_d1_lsx<real_t, vertex_t>::compute_hess_f()
+TPL void PFDR_D1_LSX::compute_hess_f()
 {
     const size_t Dga = gashape == MULTIDIM ? D : 1;
     if (loss == LINEAR){
@@ -111,8 +108,7 @@ void Pfdr_d1_lsx<real_t, vertex_t>::compute_hess_f()
     }
 }
 
-template <typename real_t, typename vertex_t>
-void Pfdr_d1_lsx<real_t, vertex_t>::compute_Ga_grad_f()
+TPL void PFDR_D1_LSX::compute_Ga_grad_f()
 {
     /**  forward and backward steps on auxiliary variables  **/
     /* explicit step */
@@ -143,8 +139,7 @@ void Pfdr_d1_lsx<real_t, vertex_t>::compute_Ga_grad_f()
     }
 }
 
-template<typename real_t, typename vertex_t>
-void Pfdr_d1_lsx<real_t, vertex_t>::compute_prox_Ga_h()
+TPL void PFDR_D1_LSX::compute_prox_Ga_h()
 {
     if (gashape == MULTIDIM){
         proj_simplex<real_t>(X, D, V, nullptr, ONE, Ga);
@@ -153,8 +148,7 @@ void Pfdr_d1_lsx<real_t, vertex_t>::compute_prox_Ga_h()
     }
 }
 
-template<typename real_t, typename vertex_t>
-real_t Pfdr_d1_lsx<real_t, vertex_t>::compute_f()
+TPL real_t PFDR_D1_LSX::compute_f()
 {
     real_t obj = ZERO;
     if (loss == LINEAR){
@@ -193,8 +187,7 @@ real_t Pfdr_d1_lsx<real_t, vertex_t>::compute_f()
     return obj;
 }
 
-template<typename real_t, typename vertex_t>
-void Pfdr_d1_lsx<real_t, vertex_t>::preconditioning(bool init)
+TPL void PFDR_D1_LSX::preconditioning(bool init)
 {
     Pfdr_d1<real_t, vertex_t>::preconditioning(init);
 
@@ -215,8 +208,7 @@ void Pfdr_d1_lsx<real_t, vertex_t>::preconditioning(bool init)
     }
 }
 
-template<typename real_t, typename vertex_t>
-void Pfdr_d1_lsx<real_t, vertex_t>::initialize_iterate()
+TPL void PFDR_D1_LSX::initialize_iterate()
 {
     if (loss == LINEAR){ /* Yv might not lie on the simplex;
         * create a point on the simplex by removing the minimum value
@@ -246,8 +238,7 @@ void Pfdr_d1_lsx<real_t, vertex_t>::initialize_iterate()
     }
 }
 
-template <typename real_t, typename vertex_t>
-real_t Pfdr_d1_lsx<real_t, vertex_t>::compute_evolution()
+TPL real_t PFDR_D1_LSX::compute_evolution()
 {
     real_t dif = ZERO;
     #pragma omp parallel for schedule(static) NUM_THREADS(V*D, V) \
@@ -265,9 +256,6 @@ real_t Pfdr_d1_lsx<real_t, vertex_t>::compute_evolution()
 
 /**  instantiate for compilation  **/
 template class Pfdr_d1_lsx<float, uint16_t>;
-
 template class Pfdr_d1_lsx<float, uint32_t>;
-
 template class Pfdr_d1_lsx<double, uint16_t>;
-
 template class Pfdr_d1_lsx<double, uint32_t>;

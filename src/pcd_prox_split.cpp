@@ -5,6 +5,9 @@
 #include "../include/omp_num_threads.hpp"
 #include "../include/pcd_prox_split.hpp"
 
+#define TPL template <typename real_t>
+#define PCD_PROX Pcd_prox<real_t>
+
 /* constants of the correct type */
 #define ZERO ((real_t) 0.)
 #define ONE ((real_t) 1.)
@@ -12,7 +15,7 @@
 
 using namespace std;
 
-template <typename real_t> Pcd_prox<real_t>::Pcd_prox(size_t size) : size(size)
+TPL PCD_PROX::Pcd_prox(size_t size) : size(size)
 {
     name = "Preconditioned proximal splitting algorithm";
     objective_values = iterate_evolution = nullptr;
@@ -25,27 +28,26 @@ template <typename real_t> Pcd_prox<real_t>::Pcd_prox(size_t size) : size(size)
     X = nullptr;
 }
 
-template <typename real_t> Pcd_prox<real_t>::~Pcd_prox(){ free(X); }
+TPL PCD_PROX::~Pcd_prox(){ free(X); }
 
-template <typename real_t> void Pcd_prox<real_t>::set_name(const char* name)
+TPL void PCD_PROX::set_name(const char* name)
 { this->name = name; }
 
-template <typename real_t> void Pcd_prox<real_t>::set_monitoring_arrays(
-    real_t* objective_values, real_t* iterate_evolution)
+TPL void PCD_PROX::set_monitoring_arrays(real_t* objective_values,
+    real_t* iterate_evolution)
 {
     this->objective_values = objective_values;
     this->iterate_evolution = iterate_evolution;
 }
 
-template <typename real_t> void Pcd_prox<real_t>::set_conditioning_param(
-    real_t cond_min, real_t dif_rcd)
+TPL void PCD_PROX::set_conditioning_param(real_t cond_min, real_t dif_rcd)
 {
     this->cond_min = cond_min;
     this->dif_rcd = dif_rcd;
 }
 
-template <typename real_t> void Pcd_prox<real_t>::set_algo_param(
-    real_t dif_tol, int it_max, int verbose, real_t eps)
+TPL void PCD_PROX::set_algo_param(real_t dif_tol, int it_max, int verbose,
+    real_t eps)
 {
     this->dif_tol = dif_tol;
     this->it_max = it_max;
@@ -53,25 +55,20 @@ template <typename real_t> void Pcd_prox<real_t>::set_algo_param(
     this->eps = eps;
 }
 
-template <typename real_t>
-void Pcd_prox<real_t>::set_iterate(real_t* X){ this->X = X; }
+TPL void PCD_PROX::set_iterate(real_t* X){ this->X = X; }
 
-template <typename real_t>
-real_t* Pcd_prox<real_t>::get_iterate(){ return this->X; }
+TPL real_t* PCD_PROX::get_iterate(){ return this->X; }
 
-template<typename real_t>
-void Pcd_prox<real_t>::initialize_iterate()
+TPL void PCD_PROX::initialize_iterate()
 {
     if (!X){ X = (real_t*) malloc_check(sizeof(real_t)*size); }
     for (size_t i = 0; i < size; i++){ X[i] = ZERO; }
 }
 
-template<typename real_t>
-void Pcd_prox<real_t>::preconditioning(bool init)
+TPL void PCD_PROX::preconditioning(bool init)
 { if (init && !X){ initialize_iterate(); } }
 
-template <typename real_t>
-int Pcd_prox<real_t>::precond_proximal_splitting(bool init)
+TPL int PCD_PROX::precond_proximal_splitting(bool init)
 {
     int it = 0;
     real_t dif = (dif_tol > ONE) ? dif_tol : ONE;
@@ -131,8 +128,7 @@ int Pcd_prox<real_t>::precond_proximal_splitting(bool init)
     return it;
 }
 
-template <typename real_t>
-void Pcd_prox<real_t>::print_progress(int it, real_t dif)
+TPL void PCD_PROX::print_progress(int it, real_t dif)
 {
     cout << "\r" << "iteration " << it << " (max. " << it_max << "); ";
     if (dif_tol > ZERO || dif_rcd > ZERO){
@@ -143,8 +139,7 @@ void Pcd_prox<real_t>::print_progress(int it, real_t dif)
     cout << flush;
 }
 
-template <typename real_t>
-real_t Pcd_prox<real_t>::compute_evolution()
+TPL real_t PCD_PROX::compute_evolution()
 /* by default, relative evolution in Euclidean norm */
 {
     real_t dif = ZERO;
@@ -162,5 +157,4 @@ real_t Pcd_prox<real_t>::compute_evolution()
 
 /**  instantiate for compilation  **/
 template class Pcd_prox<double>;
-
 template class Pcd_prox<float>;

@@ -14,9 +14,9 @@
     while (last - first > 1){
         wrk_incr = wrk_first;
     
-        /* select pivot with crude median search over three elements, and put it
-         * at the begining of the current range; note that at least one other
-         * index in the range compares greater or equal to the pivot */
+        /* select pivot with crude median search over three elements, and put
+         * it at the begining of the current range; note that at least one
+         * other index in the range compares greater or equal to the pivot */
         index_t middle = first + (last - first + 1)/2;
         if (COMP(first, middle)){
             if (COMP(middle, last)){ SWAP(first, middle); }

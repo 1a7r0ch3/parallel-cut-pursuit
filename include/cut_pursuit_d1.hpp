@@ -62,13 +62,13 @@ protected:
      * the weights so that the first value is unity */
     const real_t *coor_weights;
 
-    /* merge neighboring components with almost equal values */
-    index_t merge() override;
-
     /* compute graph total variation; use reduced edges and reduced weights */
     real_t compute_graph_d1();
 
     /**  type resolution for base template class members  **/
+    using Cp<real_t, index_t, comp_t>::merge_chains_root;
+    using Cp<real_t, index_t, comp_t>::merge_components;
+    using Cp<real_t, index_t, comp_t>::merge_count;
     using Cp<real_t, index_t, comp_t>::set_saturation;
     using Cp<real_t, index_t, comp_t>::set_inactive;
     using Cp<real_t, index_t, comp_t>::is_active;
@@ -94,9 +94,23 @@ private:
     void free_comp_values() override;
     void copy_last_comp_values() override;
     void free_last_comp_values() override;
+    void copy_component_value(comp_t src, comp_t dst) override;
+    void resize_comp_values() override;
 
     const D1p d1p; // see public enum declaration
 
     /* test if two components are sufficiently close to merge */
     bool is_almost_equal(comp_t ru, comp_t rv);
+
+    /* merge neighboring components with almost equal values */
+    void compute_merge_chains() override;
 };
+
+template <typename real_t, typename index_t, typename comp_t> 
+inline void Cp_d1<real_t, index_t, comp_t>::copy_component_value(comp_t src,
+    comp_t dst)
+{
+    const real_t* rXsrc = rX + D*src;
+    real_t* rXdst = rX + D*dst;
+    for (size_t d = 0; d < D; d++){ rXdst[d] = rXsrc[d]; }
+}

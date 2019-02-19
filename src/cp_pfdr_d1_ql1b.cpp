@@ -16,12 +16,14 @@
 #define Y_(n) (Y ? Y[(n)] : (real_t) 0.0)
 #define Yl1_(v) (Yl1 ? Yl1[(v)] : (real_t) 0.0)
 
+#define TPL template <typename real_t, typename index_t, typename comp_t>
+#define CP_D1_QL1B Cp_d1_ql1b<real_t, index_t, comp_t>
+
 using namespace std;
 
-template <typename real_t, typename index_t, typename comp_t>
-Cp_d1_ql1b<real_t, index_t, comp_t>::Cp_d1_ql1b(index_t V, index_t E,
-    const index_t* first_edge, const index_t* adj_vertices) :
-    Cp_d1<real_t, index_t, comp_t>(V, E, first_edge, adj_vertices)
+TPL CP_D1_QL1B::Cp_d1_ql1b(index_t V, index_t E, const index_t* first_edge,
+    const index_t* adj_vertices)
+    : Cp_d1<real_t, index_t, comp_t>(V, E, first_edge, adj_vertices)
 {
     /* ensure handling of infinite values (negation, comparisons) is safe */
     static_assert(numeric_limits<real_t>::is_iec559,
@@ -42,12 +44,10 @@ Cp_d1_ql1b<real_t, index_t, comp_t>::Cp_d1_ql1b(index_t V, index_t E,
     monitor_evolution = true;
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-Cp_d1_ql1b<real_t, index_t, comp_t>::~Cp_d1_ql1b(){ free(R); }
+TPL CP_D1_QL1B::~Cp_d1_ql1b(){ free(R); }
 
-template <typename real_t, typename index_t, typename comp_t>
-void Cp_d1_ql1b<real_t, index_t, comp_t>::set_quadratic(const real_t* Y,
-    size_t N, const real_t* A, real_t a)
+TPL void CP_D1_QL1B::set_quadratic(const real_t* Y, size_t N, const real_t* A,
+    real_t a)
 {
     if (!A && a == ZERO){ // no quadratic part !
         N = DIAG_ATA;
@@ -57,9 +57,8 @@ void Cp_d1_ql1b<real_t, index_t, comp_t>::set_quadratic(const real_t* Y,
     this->Y = Y; this->N = N; this->A = A; this->a = a;
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-void Cp_d1_ql1b<real_t, index_t, comp_t>::set_l1(const real_t* l1_weights,
-    real_t homo_l1_weight, const real_t* Yl1)
+TPL void CP_D1_QL1B::set_l1(const real_t* l1_weights, real_t homo_l1_weight,
+    const real_t* Yl1)
 {
     if (!l1_weights && homo_l1_weight < ZERO){
         cerr << "Cut-pursuit graph d1 quadratic l1 bounds: negative "
@@ -70,9 +69,7 @@ void Cp_d1_ql1b<real_t, index_t, comp_t>::set_l1(const real_t* l1_weights,
     this->Yl1 = Yl1;
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-void Cp_d1_ql1b<real_t, index_t, comp_t>::set_bounds(
-    const real_t* low_bnd, real_t homo_low_bnd,
+TPL void CP_D1_QL1B::set_bounds(const real_t* low_bnd, real_t homo_low_bnd,
     const real_t* upp_bnd, real_t homo_upp_bnd)
 {
     if (!low_bnd && !upp_bnd && homo_low_bnd > homo_upp_bnd){
@@ -85,9 +82,8 @@ void Cp_d1_ql1b<real_t, index_t, comp_t>::set_bounds(
     this->upp_bnd = upp_bnd; this->homo_upp_bnd = homo_upp_bnd;
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-void Cp_d1_ql1b<real_t, index_t, comp_t>::set_pfdr_param(real_t rho,
-    real_t  cond_min, real_t dif_rcd, int it_max, real_t dif_tol)
+TPL void CP_D1_QL1B::set_pfdr_param(real_t rho, real_t cond_min,
+    real_t dif_rcd, int it_max, real_t dif_tol)
 {
     this->pfdr_rho = rho;
     this->pfdr_cond_min = cond_min;
@@ -96,8 +92,7 @@ void Cp_d1_ql1b<real_t, index_t, comp_t>::set_pfdr_param(real_t rho,
     this->pfdr_dif_tol = dif_tol;
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-void Cp_d1_ql1b<real_t, index_t, comp_t>::solve_reduced_problem()
+TPL void CP_D1_QL1B::solve_reduced_problem()
 /* NOTA: if Yl1 is not constant, this solves only an approximation, replacing
  * the weighted sum of distances to Yl1 by the distance to the weighted median
  * of Yl1 */
@@ -379,8 +374,7 @@ void Cp_d1_ql1b<real_t, index_t, comp_t>::solve_reduced_problem()
     free(rl1_weights); free(rlow_bnd); free(rupp_bnd);
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-index_t Cp_d1_ql1b<real_t, index_t, comp_t>::split()
+TPL index_t CP_D1_QL1B::split()
 {
     index_t activation = 0;
     real_t* grad = (real_t*) malloc_check(sizeof(real_t)*V);
@@ -582,9 +576,7 @@ index_t Cp_d1_ql1b<real_t, index_t, comp_t>::split()
     return activation;
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-real_t Cp_d1_ql1b<real_t, index_t, comp_t>::compute_evolution(bool compute_dif,
-    comp_t & saturation)
+TPL real_t CP_D1_QL1B::compute_evolution(bool compute_dif, comp_t & saturation)
 {
     comp_t num_ops = compute_dif ? V : saturation;
     real_t dif = ZERO, amp = ZERO;
@@ -620,8 +612,7 @@ real_t Cp_d1_ql1b<real_t, index_t, comp_t>::compute_evolution(bool compute_dif,
     }
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-real_t Cp_d1_ql1b<real_t, index_t, comp_t>::compute_objective()
+TPL real_t CP_D1_QL1B::compute_objective()
 /* unfortunately, at this point one does not have access to the reduced objects
  * computed in the routine solve_reduced_problem() */
 {

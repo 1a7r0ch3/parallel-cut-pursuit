@@ -14,11 +14,13 @@
 #define Y_(n) (Y ? Y[(n)] : (real_t) 0.0)
 #define Yl1_(v) (Yl1 ? Yl1[(v)] : (real_t) 0.0)
 
+#define TPL template <typename real_t, typename vertex_t>
+#define PFDR_D1_QL1B Pfdr_d1_ql1b<real_t, vertex_t>
+
 using namespace std;
 
-template <typename real_t, typename vertex_t>
-Pfdr_d1_ql1b<real_t, vertex_t>::Pfdr_d1_ql1b(vertex_t V, size_t E,
-    const vertex_t* edges) : Pfdr_d1<real_t, vertex_t>(V, E, edges)
+TPL PFDR_D1_QL1B::Pfdr_d1_ql1b(vertex_t V, size_t E, const vertex_t* edges)
+    : Pfdr_d1<real_t, vertex_t>(V, E, edges)
 {
     /* ensure handling of infinite values (negation, comparisons) is safe */
     static_assert(numeric_limits<real_t>::is_iec559,
@@ -36,13 +38,10 @@ Pfdr_d1_ql1b<real_t, vertex_t>::Pfdr_d1_ql1b(vertex_t V, size_t E,
     lipsch_norm_nb_init = 10;
 }
 
-template <typename real_t, typename vertex_t>
-Pfdr_d1_ql1b<real_t, vertex_t>::~Pfdr_d1_ql1b(){ free(R); }
+TPL PFDR_D1_QL1B::~Pfdr_d1_ql1b(){ free(R); }
 
-template <typename real_t, typename vertex_t>
-void Pfdr_d1_ql1b<real_t, vertex_t>::set_lipsch_norm_param(
-    Equilibration lipsch_equi, real_t lipsch_norm_tol,
-    int lipsch_norm_it_max, int lipsch_norm_nb_init)
+TPL void PFDR_D1_QL1B::set_lipsch_norm_param(Equilibration lipsch_equi,
+    real_t lipsch_norm_tol, int lipsch_norm_it_max, int lipsch_norm_nb_init)
 {
     this->lipsch_equi = lipsch_equi;
     this->lipsch_norm_tol = lipsch_norm_tol;
@@ -50,9 +49,8 @@ void Pfdr_d1_ql1b<real_t, vertex_t>::set_lipsch_norm_param(
     this->lipsch_norm_nb_init = lipsch_norm_nb_init;
 }
 
-template <typename real_t, typename vertex_t>
-void Pfdr_d1_ql1b<real_t, vertex_t>::set_quadratic(const real_t* Y,
-    size_t N, const real_t* A, real_t a)
+TPL void PFDR_D1_QL1B::set_quadratic(const real_t* Y, size_t N,
+    const real_t* A, real_t a)
 {
     if (!A && !a){ N = DIAG_ATA; } // no quadratic part !
     free(R);
@@ -60,9 +58,8 @@ void Pfdr_d1_ql1b<real_t, vertex_t>::set_quadratic(const real_t* Y,
     this->Y = Y; this->N = N; this->A = A; this->a = a;
 }
 
-template <typename real_t, typename vertex_t>
-void Pfdr_d1_ql1b<real_t, vertex_t>::set_l1(const real_t* l1_weights,
-    real_t homo_l1_weight, const real_t* Yl1)
+TPL void PFDR_D1_QL1B::set_l1(const real_t* l1_weights, real_t homo_l1_weight,
+    const real_t* Yl1)
 {
     if (!l1_weights && homo_l1_weight < ZERO){
         cerr << "PFDR graph d1 quadratic l1 bounds: negative homogeneous l1 "
@@ -73,9 +70,7 @@ void Pfdr_d1_ql1b<real_t, vertex_t>::set_l1(const real_t* l1_weights,
     this->Yl1 = Yl1;
 }
 
-template <typename real_t, typename vertex_t>
-void Pfdr_d1_ql1b<real_t, vertex_t>::set_bounds(
-    const real_t* low_bnd, real_t homo_low_bnd,
+TPL void PFDR_D1_QL1B::set_bounds(const real_t* low_bnd, real_t homo_low_bnd,
     const real_t* upp_bnd, real_t homo_upp_bnd)
 {
     if (!low_bnd && !upp_bnd && homo_low_bnd > homo_upp_bnd){
@@ -88,8 +83,8 @@ void Pfdr_d1_ql1b<real_t, vertex_t>::set_bounds(
     this->upp_bnd = upp_bnd; this->homo_upp_bnd = homo_upp_bnd;
 }
 
-template <typename real_t, typename vertex_t>
-void Pfdr_d1_ql1b<real_t, vertex_t>::apply_A()
+TPL
+void PFDR_D1_QL1B::apply_A()
 {
     if (!IS_ATA(N)){ /* direct matricial case, compute residual R = Y - A X */
         #pragma omp parallel for schedule(static) NUM_THREADS(N*V, N)
@@ -116,8 +111,7 @@ void Pfdr_d1_ql1b<real_t, vertex_t>::apply_A()
     }
 }
 
-template<typename real_t, typename vertex_t>
-void Pfdr_d1_ql1b<real_t, vertex_t>::compute_lipschitz_metric()
+TPL void PFDR_D1_QL1B::compute_lipschitz_metric()
 {
     if (N == DIAG_ATA){ /* diagonal case */
         if (A){
@@ -168,12 +162,10 @@ void Pfdr_d1_ql1b<real_t, vertex_t>::compute_lipschitz_metric()
     }
 }
 
-template<typename real_t, typename vertex_t>
-void Pfdr_d1_ql1b<real_t, vertex_t>::compute_hess_f()
+TPL void PFDR_D1_QL1B::compute_hess_f()
 { for (vertex_t v = 0; v < V; v++){ Ga[v] = L ? L[v] : l; } }
 
-template<typename real_t, typename vertex_t>
-void Pfdr_d1_ql1b<real_t, vertex_t>::add_pseudo_hess_h()
+TPL void PFDR_D1_QL1B::add_pseudo_hess_h()
 /* l1 contribution
  * a local quadratic approximation of x -> ||x|| at z is
  * x -> 1/2 (||x||^2/||z|| + ||z||)
@@ -189,8 +181,7 @@ void Pfdr_d1_ql1b<real_t, vertex_t>::add_pseudo_hess_h()
     }
 }
 
-template <typename real_t, typename vertex_t>
-void Pfdr_d1_ql1b<real_t, vertex_t>::compute_Ga_grad_f()
+TPL void PFDR_D1_QL1B::compute_Ga_grad_f()
 /* supposed to be called after apply_A() */
 {
     if (!IS_ATA(N)){ /* direct matricial case, grad = -(A^t) R */
@@ -211,8 +202,7 @@ void Pfdr_d1_ql1b<real_t, vertex_t>::compute_Ga_grad_f()
     }
 }
 
-template<typename real_t, typename vertex_t>
-void Pfdr_d1_ql1b<real_t, vertex_t>::compute_prox_Ga_h()
+TPL void PFDR_D1_QL1B::compute_prox_Ga_h()
 {
     #pragma omp parallel for schedule(static) NUM_THREADS(V)
     for (vertex_t v = 0; v < V; v++){
@@ -237,8 +227,7 @@ void Pfdr_d1_ql1b<real_t, vertex_t>::compute_prox_Ga_h()
     }
 }
 
-template<typename real_t, typename vertex_t>
-real_t Pfdr_d1_ql1b<real_t, vertex_t>::compute_f()
+TPL real_t PFDR_D1_QL1B::compute_f()
 {
     real_t obj = ZERO;
     if (!IS_ATA(N)){ /* direct matricial case, 1/2 ||Y - A X||^2 */
@@ -246,7 +235,7 @@ real_t Pfdr_d1_ql1b<real_t, vertex_t>::compute_f()
             reduction(+:obj)
         for (size_t n = 0; n < N; n++){ obj += R[n]*R[n]; }
         obj *= HALF;
-    }else if (A || a){ /* premultiplied by A^t, 1/2 <X, A^t A X> - <X, A^t Y> */
+    }else if (A || a){ /* premultiplied by A^t, 1/2<X, A^t AX> - <X, A^t Y> */
         #pragma omp parallel for schedule(static) NUM_THREADS(V) \
             reduction(+:obj)
         for (vertex_t v = 0; v < V; v++){
@@ -256,8 +245,7 @@ real_t Pfdr_d1_ql1b<real_t, vertex_t>::compute_f()
     return obj;
 }
 
-template<typename real_t, typename vertex_t>
-real_t Pfdr_d1_ql1b<real_t, vertex_t>::compute_h()
+TPL real_t PFDR_D1_QL1B::compute_h()
 {
     real_t obj = ZERO;
     if (l1_weights || homo_l1_weight){ /* ||x||_l1 */
@@ -271,8 +259,7 @@ real_t Pfdr_d1_ql1b<real_t, vertex_t>::compute_h()
     return obj;
 }
 
-template<typename real_t, typename vertex_t>
-void Pfdr_d1_ql1b<real_t, vertex_t>::initialize_iterate()
+TPL void PFDR_D1_QL1B::initialize_iterate()
 /* initialize with coordinatewise pseudo-inverse pinv = <Av, Y>/||Av||^2,
  * or on l1 target if there is no quadratic part */
 {
@@ -311,8 +298,7 @@ void Pfdr_d1_ql1b<real_t, vertex_t>::initialize_iterate()
     }
 }
 
-template<typename real_t, typename vertex_t>
-void Pfdr_d1_ql1b<real_t, vertex_t>::preconditioning(bool init)
+TPL void PFDR_D1_QL1B::preconditioning(bool init)
 {
     Pfdr_d1<real_t, vertex_t>::preconditioning(init);
 
@@ -339,8 +325,7 @@ void Pfdr_d1_ql1b<real_t, vertex_t>::preconditioning(bool init)
     apply_A();
 }
 
-template<typename real_t, typename vertex_t>
-void Pfdr_d1_ql1b<real_t, vertex_t>::main_iteration()
+TPL void PFDR_D1_QL1B::main_iteration()
 {
     Pfdr<real_t, vertex_t>::main_iteration();
     
@@ -349,9 +334,6 @@ void Pfdr_d1_ql1b<real_t, vertex_t>::main_iteration()
 
 /**  instantiate for compilation  **/
 template class Pfdr_d1_ql1b<float, uint16_t>;
-
 template class Pfdr_d1_ql1b<float, uint32_t>;
-
 template class Pfdr_d1_ql1b<double, uint16_t>;
-
 template class Pfdr_d1_ql1b<double, uint32_t>;

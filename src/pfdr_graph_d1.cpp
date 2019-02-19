@@ -19,12 +19,13 @@
 #define Th_d1_(e, ed) (thd1shape == SCALAR ? th_d1 : \
                        thd1shape == MONODIM ? Th_d1[(e)] : Th_d1[(ed)])
 
+#define TPL template <typename real_t, typename vertex_t>
+#define PFDR_D1 Pfdr_d1<real_t, vertex_t>
+
 using namespace std;
 
-template <typename real_t, typename vertex_t>
-Pfdr_d1<real_t, vertex_t>::Pfdr_d1(vertex_t V, size_t E,
-    const vertex_t* edges, size_t D, D1p d1p, const real_t* coor_weights,
-    Condshape hess_f_h_shape) :
+TPL PFDR_D1::Pfdr_d1(vertex_t V, size_t E, const vertex_t* edges, size_t D,
+    D1p d1p, const real_t* coor_weights, Condshape hess_f_h_shape) :
     Pfdr<real_t, vertex_t>(V, 2*E, edges, D,
         compute_ga_shape(coor_weights, hess_f_h_shape),
         compute_w_shape(d1p, coor_weights, hess_f_h_shape)),
@@ -37,13 +38,10 @@ Pfdr_d1<real_t, vertex_t>::Pfdr_d1(vertex_t V, size_t E,
     W_d1 = Th_d1 = nullptr;
 }
 
-template <typename real_t, typename vertex_t>
-Pfdr_d1<real_t, vertex_t>::~Pfdr_d1(){ free(W_d1); free(Th_d1); }
+TPL PFDR_D1::~Pfdr_d1(){ free(W_d1); free(Th_d1); }
 
-template <typename real_t, typename vertex_t>
-void Pfdr_d1<real_t, vertex_t>::set_edge_weights(
-    const real_t* edge_weights, real_t homo_edge_weight,
-    const real_t* coor_weights)
+TPL void PFDR_D1::set_edge_weights(const real_t* edge_weights,
+    real_t homo_edge_weight, const real_t* coor_weights)
 {
     this->edge_weights = edge_weights;
     this->homo_edge_weight = homo_edge_weight;
@@ -56,8 +54,7 @@ void Pfdr_d1<real_t, vertex_t>::set_edge_weights(
     this->coor_weights = coor_weights;
 }
 
-template<typename real_t, typename vertex_t>
-void Pfdr_d1<real_t, vertex_t>::add_pseudo_hess_g()
+TPL void PFDR_D1::add_pseudo_hess_g()
 /* d1 contribution and splitting weights
  * a local quadratic approximation of (x1,x2) -> ||x1 - x2|| at (y1,y2) is
  * x -> 1/2 (||x1 - x2||^2/||y1 - y2|| + ||y1 - y2||)
@@ -114,8 +111,7 @@ void Pfdr_d1<real_t, vertex_t>::add_pseudo_hess_g()
     }
 }
 
-template<typename real_t, typename vertex_t>
-void Pfdr_d1<real_t, vertex_t>::make_sum_Wi_Id()
+TPL void PFDR_D1::make_sum_Wi_Id()
 {
     /* compute splitting weights sum */
     real_t* sum_Wi;
@@ -168,8 +164,7 @@ void Pfdr_d1<real_t, vertex_t>::make_sum_Wi_Id()
     if (2*E*Dwd1 < V && E*Dthd1 < V){ free(sum_Wi); }
 }
 
-template<typename real_t, typename vertex_t>
-void Pfdr_d1<real_t, vertex_t>::preconditioning(bool init)
+TPL void PFDR_D1::preconditioning(bool init)
 {
     /* allocate weights and thresholds for d1 prox operator */
     if (!W_d1 && wd1shape != SCALAR){
@@ -223,8 +218,7 @@ void Pfdr_d1<real_t, vertex_t>::preconditioning(bool init)
     }
 }
 
-template <typename real_t, typename vertex_t>
-void Pfdr_d1<real_t, vertex_t>::compute_prox_GaW_g()
+TPL void PFDR_D1::compute_prox_GaW_g()
 {
     #pragma omp parallel for schedule(static) NUM_THREADS(8*E*D, E)
     for (size_t e = 0; e < E; e++){
@@ -273,8 +267,7 @@ void Pfdr_d1<real_t, vertex_t>::compute_prox_GaW_g()
     }
 }
 
-template <typename real_t, typename vertex_t>
-real_t Pfdr_d1<real_t, vertex_t>::compute_g()
+TPL real_t PFDR_D1::compute_g()
 {
     real_t obj = ZERO;
     #pragma omp parallel for schedule(static) NUM_THREADS(2*E*D, E) \
@@ -299,9 +292,6 @@ real_t Pfdr_d1<real_t, vertex_t>::compute_g()
 
 /* instantiate for compilation */
 template class Pfdr_d1<float, uint16_t>;
-
 template class Pfdr_d1<float, uint32_t>;
-
 template class Pfdr_d1<double, uint16_t>;
-
 template class Pfdr_d1<double, uint32_t>;

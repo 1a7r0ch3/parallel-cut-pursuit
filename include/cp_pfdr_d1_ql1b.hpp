@@ -1,4 +1,4 @@
-/*============================================================================
+/*=============================================================================
  * Derived class for cut-pursuit algorithm with d1 (total variation) 
  * penalization, with a quadratic functional, l1 penalization and box
  * constraints:
@@ -27,9 +27,9 @@
  *
  * Parallel implementation with OpenMP API.
  *
- * H. Raguet and L. Landrieu, Cut-Pursuit Algorithm for Regularizing Nonsmooth
- * Functionals with Graph Total Variation, International Conference on Machine
- * Learning, PMLR, 2018, 80, 4244-4253
+ * H. Raguet and L. Landrieu, Cut-Pursuit Algorithm for Regularizing
+ * Nonsmooth Functionals with Graph Total Variation, International Conference
+ * on Machine Learning, PMLR, 2018, 80, 4244-4253
  *
  * H. Raguet, A Note on the Forward-Douglas--Rachford Splitting for Monotone 
  * Inclusion and Convex Optimization Optimization Letters, 2018, 1-24

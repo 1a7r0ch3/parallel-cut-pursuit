@@ -2,6 +2,9 @@
 #include <cstdint> // for instantiation
 #include "../include/cp_graph.hpp"
 
+#define TPL template <typename real_t, typename index_t, typename comp_t>
+#define CP_GRAPH Cp_graph<real_t, index_t, comp_t>
+
 /* constants of the correct type */
 #define ZERO ((real_t) 0.0)
 /* special constants for node->parent */
@@ -25,8 +28,7 @@
 	(and the second queue becomes empty).
 */
 
-template <typename real_t, typename index_t, typename comp_t> 
-	inline void Cp_graph<real_t, index_t, comp_t>::set_active(node *i)
+TPL inline void CP_GRAPH::set_active(node *i)
 {
 	if (!i->next)
 	{
@@ -43,9 +45,7 @@ template <typename real_t, typename index_t, typename comp_t>
 	If it is connected to the sink, it stays in the list,
 	otherwise it is removed from the list
 */
-template <typename real_t, typename index_t, typename comp_t> 
-	inline typename Cp_graph<real_t, index_t, comp_t>::node*
-    Cp_graph<real_t, index_t, comp_t>::next_active()
+TPL inline typename CP_GRAPH::node* CP_GRAPH::next_active()
 {
 	node *i;
 
@@ -72,8 +72,7 @@ template <typename real_t, typename index_t, typename comp_t>
 
 /***********************************************************************/
 
-template <typename real_t, typename index_t, typename comp_t> 
-	inline void Cp_graph<real_t, index_t, comp_t>::set_orphan_front(node *i)
+TPL inline void CP_GRAPH::set_orphan_front(node *i)
 {
 	nodeptr *np;
 	i -> parent = ORPHAN;
@@ -83,8 +82,7 @@ template <typename real_t, typename index_t, typename comp_t>
 	orphan_first = np;
 }
 
-template <typename real_t, typename index_t, typename comp_t> 
-	inline void Cp_graph<real_t, index_t, comp_t>::set_orphan_rear(node *i)
+TPL inline void CP_GRAPH::set_orphan_rear(node *i)
 {
 	nodeptr *np;
 	i -> parent = ORPHAN;
@@ -98,9 +96,7 @@ template <typename real_t, typename index_t, typename comp_t>
 
 /***********************************************************************/
 
-template <typename real_t, typename index_t, typename comp_t> 
-void Cp_graph<real_t, index_t, comp_t>::maxflow_init(index_t comp_size,
-    const index_t *comp_nodes)
+TPL void CP_GRAPH::maxflow_init(index_t comp_size, const index_t *comp_nodes)
 {
 	node *i;
     index_t ii;
@@ -141,8 +137,7 @@ void Cp_graph<real_t, index_t, comp_t>::maxflow_init(index_t comp_size,
 	}
 }
 
-template <typename real_t, typename index_t, typename comp_t> 
-	void Cp_graph<real_t, index_t, comp_t>::augment(arc *middle_arc)
+TPL void CP_GRAPH::augment(arc *middle_arc)
 {
 	node *i;
 	arc *a;
@@ -213,8 +208,7 @@ template <typename real_t, typename index_t, typename comp_t>
 
 /***********************************************************************/
 
-template <typename real_t, typename index_t, typename comp_t> 
-	void Cp_graph<real_t, index_t, comp_t>::process_source_orphan(node *i)
+TPL void CP_GRAPH::process_source_orphan(node *i)
 {
 	node *j;
 	arc *a0, *a0_min = nullptr, *a;
@@ -291,8 +285,7 @@ template <typename real_t, typename index_t, typename comp_t>
 	}
 }
 
-template <typename real_t, typename index_t, typename comp_t> 
-	void Cp_graph<real_t, index_t, comp_t>::process_sink_orphan(node *i)
+TPL void CP_GRAPH::process_sink_orphan(node *i)
 {
 	node *j;
 	arc *a0, *a0_min = nullptr, *a;
@@ -371,9 +364,7 @@ template <typename real_t, typename index_t, typename comp_t>
 
 /***********************************************************************/
 
-template <typename real_t, typename index_t, typename comp_t> 
-void Cp_graph<real_t, index_t, comp_t>::maxflow(index_t comp_size,
-    const index_t *comp_nodes)
+TPL void CP_GRAPH::maxflow(index_t comp_size, const index_t *comp_nodes)
 {
 	node *i, *j, *current_node = nullptr;
 	arc *a;

@@ -1,4 +1,4 @@
-/*============================================================================
+/*===========================================================================
  * Derived class for cut-pursuit algorithm with d1 (total variation) 
  * penalization, with a separable loss term and simplex constraints:
  *
@@ -7,7 +7,7 @@
  *        F(x) = f(x) + ||x||_d1 + i_{simplex}(x)
  *
  * where for each vertex, x_v is a D-dimensional vector,
- *       f is a separable data-fidelity loss
+ *       f(x) = sum_{v in V} f_v(x_v) is a separable data-fidelity loss
  *       ||x||_d1 = sum_{uv in E} w_d1_uv (sum_d w_d1_d |x_ud - x_vd|),
  * and i_{simplex} is the standard D-simplex constraint over each vertex,
  *     i_{simplex} = 0 for all v, (for all d, x_vd >= 0) and sum_d x_vd = 1,
@@ -18,29 +18,25 @@
  *
  * Parallel implementation with OpenMP API.
  *
- * H. Raguet and L. Landrieu, Cut-Pursuit Algorithm for Regularizing Nonsmooth
- * Functionals with Graph Total Variation, International Conference on Machine
- * Learning, PMLR, 2018, 80, 4244-4253
+ * H. Raguet and L. Landrieu, Cut-Pursuit Algorithm for Regularizing 
+ * Nonsmooth Functionals with Graph Total Variation, International Conference
+ * on Machine Learning, PMLR, 2018, 80, 4244-4253
  *
  * H. Raguet, A Note on the Forward-Douglas--Rachford Splitting for Monotone 
  * Inclusion and Convex Optimization, Optimization Letters, 2018, 1-24
  *
  * Hugo Raguet 2018
- *===========================================================================*/
+ *=========================================================================*/
 #pragma once
 #include "cut_pursuit_d1.hpp"
 /* these macros must correspond with the ones in pfdr_d1_lsx.hpp */
 #define LINEAR ((real_t) 0.0)
 #define QUADRATIC ((real_t) 1.0)
 
-/* index_t must be able to represent the numbers of vertices and of edges
- * in the main graph; comp_t must be able to represent the numbers of constant 
- * connected components in the reduced graph, and the dimension D */
-
 /* index_t must be able to represent the numbers of vertices and of
  * (undirected) edges in the main graph; comp_t must be able to represent the
  * numbers of constant connected components in the reduced graph, as well as
- * and the dimension D */
+ * one less than the dimension D */
 template <typename real_t, typename index_t, typename comp_t>
 class Cp_d1_lsx : public Cp_d1<real_t, index_t, comp_t>
 {

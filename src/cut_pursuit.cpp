@@ -13,10 +13,12 @@
 #define MAX_COMP (std::numeric_limits<comp_t>::max())
 #define NO_EDGE ((index_t) -1)
 
+#define TPL template <typename real_t, typename index_t, typename comp_t>
+#define CP Cp<real_t, index_t, comp_t>
+
 using namespace std; 
 
-template <typename real_t, typename index_t, typename comp_t>
-Cp<real_t, index_t, comp_t>::Cp(index_t V, index_t E,
+TPL CP::Cp(index_t V, index_t E,
     const index_t* first_edge, const index_t* adj_vertices)
     : V(V), E(E), first_edge(first_edge), adj_vertices(adj_vertices)
 {
@@ -46,29 +48,25 @@ Cp<real_t, index_t, comp_t>::Cp(index_t V, index_t E,
     monitor_evolution = false;
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-Cp<real_t, index_t, comp_t>::~Cp()
+TPL CP::~Cp()
 {
     delete G;
     free(comp_assign); free(comp_list); free(first_vertex);
     free(reduced_edges); free(reduced_edge_weights);
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-void Cp<real_t, index_t, comp_t>::reset_active_edges()
+TPL void CP::reset_active_edges()
 { for (index_t e = 0; e < E; e++){ set_inactive(e); } }
 
-template <typename real_t, typename index_t, typename comp_t>
-void Cp<real_t, index_t, comp_t>::set_edge_weights(const real_t* edge_weights,
+TPL void CP::set_edge_weights(const real_t* edge_weights,
     real_t homo_edge_weight)
 {
     this->edge_weights = edge_weights;
     this->homo_edge_weight = homo_edge_weight;
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-void Cp<real_t, index_t, comp_t>::set_monitoring_arrays(
-    real_t* objective_values, double* elapsed_time, real_t* iterate_evolution)
+TPL void CP::set_monitoring_arrays(real_t* objective_values,
+    double* elapsed_time, real_t* iterate_evolution)
 {
     this->objective_values = objective_values;
     this->elapsed_time = elapsed_time;
@@ -76,22 +74,18 @@ void Cp<real_t, index_t, comp_t>::set_monitoring_arrays(
     if (iterate_evolution){ monitor_evolution = true; }
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-void Cp<real_t, index_t, comp_t>::set_components(comp_t rV,
-    comp_t* comp_assign)
+TPL void CP::set_components(comp_t rV, comp_t* comp_assign)
 {
     if (rV > 1 && !comp_assign){
         cerr << "Cut-pursuit: if an initial number of components greater than "
-            "unity is given, components assignment should be provided." << endl;
+            "unity is given, components assignment must be provided." << endl;
         exit(EXIT_FAILURE);
     }
     this->rV = rV;
     this->comp_assign = comp_assign;
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-void Cp<real_t, index_t, comp_t>::set_cp_param(real_t dif_tol, int it_max,
-    int verbose, real_t eps)
+TPL void CP::set_cp_param(real_t dif_tol, int it_max, int verbose, real_t eps)
 {
     this->dif_tol = dif_tol;
     if (dif_tol > ZERO){ monitor_evolution = true; }
@@ -100,9 +94,8 @@ void Cp<real_t, index_t, comp_t>::set_cp_param(real_t dif_tol, int it_max,
     this->eps = ZERO < dif_tol && dif_tol < eps ? dif_tol : eps;
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-comp_t Cp<real_t, index_t, comp_t>::get_components(comp_t** comp_assign,
-    index_t** first_vertex, index_t** comp_list)
+TPL comp_t CP::get_components(comp_t** comp_assign, index_t** first_vertex,
+    index_t** comp_list)
 {
     if (comp_assign){ *comp_assign = this->comp_assign; }
     if (first_vertex){ *first_vertex = this->first_vertex; }
@@ -111,8 +104,7 @@ comp_t Cp<real_t, index_t, comp_t>::get_components(comp_t** comp_assign,
 }
 
 
-template <typename real_t, typename index_t, typename comp_t>
-size_t Cp<real_t, index_t, comp_t>::get_reduced_graph(comp_t** reduced_edges,
+TPL size_t CP::get_reduced_graph(comp_t** reduced_edges,
     real_t** reduced_edge_weights)
 {
     if (reduced_edges){ *reduced_edges = this->reduced_edges; }
@@ -122,8 +114,7 @@ size_t Cp<real_t, index_t, comp_t>::get_reduced_graph(comp_t** reduced_edges,
     return this->rE;
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-int Cp<real_t, index_t, comp_t>::cut_pursuit(bool init)
+TPL int CP::cut_pursuit(bool init)
 {
     int it = 0;
     double timer = 0.0;
@@ -209,9 +200,7 @@ int Cp<real_t, index_t, comp_t>::cut_pursuit(bool init)
     return it;
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-double Cp<real_t, index_t, comp_t>::monitor_time(
-    chrono::steady_clock::time_point start)
+TPL double CP::monitor_time(chrono::steady_clock::time_point start)
 { 
     using namespace chrono;
     steady_clock::time_point current = steady_clock::now();
@@ -219,9 +208,8 @@ double Cp<real_t, index_t, comp_t>::monitor_time(
                / static_cast<double>(steady_clock::period::den);
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-void Cp<real_t, index_t, comp_t>::print_progress(int it, real_t dif,
-    comp_t saturation, double timer)
+TPL void CP::print_progress(int it, real_t dif, comp_t saturation,
+    double timer)
 {
     cout << "\n\tCut-pursuit iteration " << it << " (max. " << it_max << ")\n";
     if (dif_tol > ZERO || iterate_evolution){
@@ -238,8 +226,7 @@ void Cp<real_t, index_t, comp_t>::print_progress(int it, real_t dif,
     cout << endl;
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-void Cp<real_t, index_t, comp_t>::single_connected_component()
+TPL void CP::single_connected_component()
 {
     for (index_t v = 0; v < V; v++){ comp_assign[v] = 0; }
     free(first_vertex);
@@ -249,8 +236,7 @@ void Cp<real_t, index_t, comp_t>::single_connected_component()
     set_saturation(0, false);
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-void Cp<real_t, index_t, comp_t>::arbitrary_connected_components()
+TPL void CP::arbitrary_connected_components()
 {
     index_t max_comp_size = V/rV + 1;
     free(first_vertex);
@@ -319,8 +305,7 @@ void Cp<real_t, index_t, comp_t>::arbitrary_connected_components()
     }
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-void Cp<real_t, index_t, comp_t>::assign_connected_components()
+TPL void CP::assign_connected_components()
 {
     /* activate arcs between components */
     #pragma omp parallel for schedule(dynamic) NUM_THREADS(E, V)
@@ -349,8 +334,7 @@ void Cp<real_t, index_t, comp_t>::assign_connected_components()
     for (comp_t rv = 0; rv < rV; rv++){ set_saturation(rv, false); }
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-comp_t Cp<real_t, index_t, comp_t>::compute_connected_components()
+TPL comp_t CP::compute_connected_components()
 {
     comp_t saturation = 0;
 
@@ -421,8 +405,7 @@ comp_t Cp<real_t, index_t, comp_t>::compute_connected_components()
     return saturation;
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-void Cp<real_t, index_t, comp_t>::compute_reduced_graph()
+TPL void CP::compute_reduced_graph()
 /* this could actually be parallelized, but is it worth the pain? */
 {
     free(reduced_edges);
@@ -511,8 +494,7 @@ void Cp<real_t, index_t, comp_t>::compute_reduced_graph()
     }
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-void Cp<real_t, index_t, comp_t>::initialize()
+TPL void CP::initialize()
 {
     if (!comp_assign){
         comp_assign = (comp_t*) malloc_check(sizeof(comp_t)*V);
@@ -535,6 +517,106 @@ void Cp<real_t, index_t, comp_t>::initialize()
     compute_reduced_graph();
     solve_reduced_problem();
     merge();
+}
+
+TPL void CP::merge_components(comp_t& ru, comp_t& rv)
+{
+    /* ensure the smallest component will be the root of the merge chain */
+    if (ru > rv){ comp_t tmp = ru; ru = rv; rv = tmp; }
+    /* link both chains; update leaf of the merge chain; update root info */
+    merge_chains_next[merge_chains_leaf[ru]] = rv;
+    merge_chains_leaf[ru] = merge_chains_leaf[rv];
+    merge_chains_root[rv] = merge_chains_root[merge_chains_leaf[rv]] = ru;
+    set_saturation(ru, false); // component has changed
+    merge_count++;
+}
+
+TPL index_t CP::merge()
+{
+    /* create the chains representing the merged components */
+    merge_chains_root = (comp_t*) malloc_check(sizeof(comp_t)*rV); 
+    merge_chains_next = (comp_t*) malloc_check(sizeof(comp_t)*rV);
+    merge_chains_leaf = (comp_t*) malloc_check(sizeof(comp_t)*rV);
+    for (comp_t rv = 0; rv < rV; rv++){
+        merge_chains_root[rv] = rv;
+        merge_chains_next[rv] = rv;
+        merge_chains_leaf[rv] = rv;
+    }
+    merge_count = 0;
+    compute_merge_chains();
+    if (!merge_count){ return 0; }
+
+    /* construct a new version of 'comp_list' in temporary storage and update
+     * 'rX', 'first_vertex', and 'reduced_edges' and '_weights' in-place */
+    comp_t* new_comp_id = merge_chains_leaf; // reuse storage
+    comp_t rn = 0; // component number
+    index_t i = 0; // index in the new comp_list
+    for (comp_t ru = 0; ru < rV; ru++){
+        if (merge_chains_root[ru] != ru){ continue; }
+        /* otherwise ru is a root, create the corresponding new component */
+        copy_component_value(ru, rn); // rn <= ru, rX can be modified in-place 
+        comp_t rv = ru; 
+        index_t first = i; // holds index of first vertex of the component
+        while (true){
+            new_comp_id[rv] = rn;
+            for (index_t v = first_vertex[rv]; v < first_vertex[rv + 1]; v++){
+                set_tmp_comp_list(i++, comp_list[v]);
+            }
+            if (merge_chains_next[rv] == rv){ break; } // end of chain
+            else{ rv = merge_chains_next[rv]; }
+        }
+        /* the root of each chain is the smallest component in the chain, so
+         * now that 'rn' new components have been constructed, the first 'rn'
+         * previous components have been copied, hence 'first_vertex' will not
+         * be accessed before position 'rn' anymore; thus modify in-place */
+        first_vertex[rn++] = first;
+    }
+    /* finalize and shrink arrays to fit the reduced number of components */
+    first_vertex[rV = rn] = V;
+    first_vertex = (index_t*) realloc_check(first_vertex,
+        sizeof(index_t)*(rV + 1));
+    resize_comp_values();
+    for (index_t v = 0; v < V; v++){ /* update components assignments */
+        comp_list[v] = get_tmp_comp_list(v);
+        comp_assign[v] = new_comp_id[comp_assign[v]];
+    }
+
+    free(merge_chains_root);
+    free(merge_chains_next);
+    free(merge_chains_leaf);
+
+    /* update corresponding reduced edges */
+    size_t new_re = 0;
+    for (size_t re = 0; re < rE; re++){
+        comp_t new_ru = new_comp_id[reduced_edges[2*re]];
+        comp_t new_rv = new_comp_id[reduced_edges[2*re + 1]];
+        if (new_ru != new_rv){
+            reduced_edges[2*new_re] = new_ru;
+            reduced_edges[2*new_re + 1] = new_rv;
+            reduced_edge_weights[new_re] = reduced_edge_weights[re];
+            new_re++;
+        }
+    }
+    rE = new_re; // actually only upper bound, some edges might appear twice
+    reduced_edges = (comp_t*) realloc_check(reduced_edges,
+            sizeof(comp_t)*2*rE);
+    reduced_edge_weights = (real_t*) realloc_check(reduced_edge_weights,
+            sizeof(real_t)*rE);
+
+    /* deactivate corresponding edges */
+    index_t deactivation = 0;
+    #pragma omp parallel for schedule(dynamic) NUM_THREADS(E, V)
+    for (index_t v = 0; v < V; v++){ /* will run along all edges */
+        comp_t rv = comp_assign[v];
+        for (index_t e = first_edge[v]; e < first_edge[v + 1]; e++){
+            if (is_active(e) && rv == comp_assign[adj_vertices[e]]){
+                set_inactive(e);
+                deactivation++;
+            }
+        }
+    }
+
+    return deactivation;
 }
 
 /* instantiate for compilation */

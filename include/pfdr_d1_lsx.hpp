@@ -4,7 +4,7 @@
  *        F(x) = f(x) + ||x||_d1 + i_{simplex}(x)
  *
  * where for each vertex, x_v is a D-dimensional vector,
- *       f is a separable data-fidelity loss
+ *       f(x) = sum_{v in V} f_v(x_v) is a separable data-fidelity loss
  *       ||x||_d1 = sum_{uv in E} w_d1_uv (sum_d w_d1_d |x_ud - x_vd|),
  * and i_{simplex} is the standard D-simplex constraint over each vertex,
  *     i_{simplex} = 0 for all v, (for all d, x_vd >= 0) and sum_d x_vd = 1,

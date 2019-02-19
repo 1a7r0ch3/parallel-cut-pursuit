@@ -24,7 +24,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- *============================================================================*/
+ *===========================================================================*/
 #pragma once
 #include <cstdlib>
 #include <chrono>
@@ -179,10 +179,44 @@ protected:
     virtual void solve_reduced_problem() = 0;
 
     /* split components with graph cuts, by activating edges */
-    virtual index_t split() = 0; 
+    virtual index_t split() = 0;
 
-    /* merge neighboring components when deemed useful */
-    virtual index_t merge() = 0;
+    /**  merging components when deemed useful  **/
+
+    /* during the merging step, merged components are stored as chains,
+     * represented by arrays of length rV 'merge_chains_root', '_next' and
+     * '_leaf'; merge chain involving component rv follows the scheme
+     *   root[rv] -> ... -> rv -> next[rv] -> ... -> leaf[rv] ;
+     * NOTA: only _next[rv] is always up-to-date, but:
+     * - root[rv] always points to rv or a preceding component in its chain,
+     * - if rv is the root of its chain, then _root[rv] = rv,
+     * - if rv is the root of its chain, then _leaf[rv] is up-to-date,
+     * in particular, rv is root of its chain if and only if _root[rv] = rv,
+     * and is the leaf of its chain if and only if _next[rv] = rv;
+     * an additional requirement is that the root of each chain should be the
+     * component in the chain with lowest index */
+    comp_t *merge_chains_root, *merge_chains_next, *merge_chains_leaf;
+    comp_t merge_count;
+
+    /* merge the merge chains of the two given roots;
+     * the root of the resulting chain will be the component in the chains
+     * with lowest index, and assigned to the parameter ru; the root of the
+     * other chain in the merge is assigned to rv;
+     * increment merge count only if components where not already merged */
+    virtual void merge_components(comp_t& ru, comp_t& rv);
+
+    /* compute the merge chains and count the number of effective merges;
+     * NOTA: the chosen reduced graph structure is just a list of edges,
+     * and does not provide the complete list of edges linking to a given
+     * vertex, thus getting back to the root of the chains for each edge is
+     * O(rE^2), but is expected to be much less in practice */
+    virtual void compute_merge_chains() = 0;
+
+    /* copy the value of the component 'src' in the value 'dst' */
+    virtual void copy_component_value(comp_t src, comp_t dst) = 0;
+
+    /* main routine using the above ones to perform the merge step */
+    index_t merge();
 
     /**  monitoring evolution; set monitor_evolution to true  **/
 
@@ -190,6 +224,7 @@ protected:
     virtual void free_comp_values() = 0;
     virtual void copy_last_comp_values() = 0;
     virtual void free_last_comp_values() = 0;
+    virtual void resize_comp_values() = 0;
 
     /* compute relative iterate evolution;
      * for convex problems, components saturation should be checked here */
@@ -252,81 +287,57 @@ private:
     void compute_reduced_graph();
 };
 
-/***  inline methods  ***/
-template <typename real_t, typename index_t, typename comp_t>
-inline bool Cp<real_t, index_t, comp_t>::is_active(index_t e)
+#define TPL template <typename real_t, typename index_t, typename comp_t>
+#define CP Cp<real_t, index_t, comp_t>
+
+/***  inline methods in relation with main graph  ***/
+
+TPL inline bool CP::is_active(index_t e)
 { return G->arcs[(size_t) 2*e].r_cap == ACTIVE_EDGE; }
 
-template <typename real_t, typename index_t, typename comp_t>
-inline bool Cp<real_t, index_t, comp_t>::is_sink(index_t v)
+TPL inline bool CP::is_sink(index_t v)
 { return !G->nodes[v].parent || G->nodes[v].is_sink; }
 
-template <typename real_t, typename index_t, typename comp_t>
-inline void Cp<real_t, index_t, comp_t>::set_tmp_comp_assign(index_t v,
-    comp_t rv)
+TPL inline void CP::set_tmp_comp_assign(index_t v, comp_t rv)
 { G->nodes[v].comp = rv; }
 
-template <typename real_t, typename index_t, typename comp_t>
-inline comp_t Cp<real_t, index_t, comp_t>::get_tmp_comp_assign(index_t v)
+TPL inline comp_t CP::get_tmp_comp_assign(index_t v)
 { return G->nodes[v].comp; }
 
-template <typename real_t, typename index_t, typename comp_t>
-inline void Cp<real_t, index_t, comp_t>::set_tmp_comp_list(index_t i,
-    index_t v)
+TPL inline void CP::set_tmp_comp_list(index_t i, index_t v)
 { G->nodes[i].vertex = v; }
 
-template <typename real_t, typename index_t, typename comp_t>
-inline index_t Cp<real_t, index_t, comp_t>::get_tmp_comp_list(index_t v)
+TPL inline index_t CP::get_tmp_comp_list(index_t v)
 { return G->nodes[v].vertex; }
 
-template <typename real_t, typename index_t, typename comp_t>
-inline void Cp<real_t, index_t, comp_t>::set_edge_capacities(index_t e,
-    real_t cap_uv, real_t cap_vu)
+TPL inline void CP::set_edge_capacities(index_t e, real_t cap_uv,
+    real_t cap_vu)
 {
     size_t a = (size_t) 2*e; // cast as size_t to avoid overflow
     G->arcs[a].r_cap = cap_uv;
     G->arcs[a + 1].r_cap = cap_vu;
 }
 
-template <typename real_t, typename index_t, typename comp_t>
-inline void Cp<real_t, index_t, comp_t>::set_active(index_t e)
+TPL inline void CP::set_active(index_t e)
 { set_edge_capacities(e, ACTIVE_EDGE, ACTIVE_EDGE); }
 
-template <typename real_t, typename index_t, typename comp_t>
-inline void Cp<real_t, index_t, comp_t>::set_inactive(index_t e)
+TPL inline void CP::set_inactive(index_t e)
 { set_edge_capacities(e, 0.0, 0.0); }
 
-template <typename real_t, typename index_t, typename comp_t>
-inline void Cp<real_t, index_t, comp_t>::set_term_capacities(index_t v,
-    real_t cap)
+TPL inline void CP::set_term_capacities(index_t v, real_t cap)
 { G->nodes[v].tr_cap = cap; }
 
-template <typename real_t, typename index_t, typename comp_t>
-inline void Cp<real_t, index_t, comp_t>::add_term_capacities(index_t v,
-    real_t cap)
+TPL inline void CP::add_term_capacities(index_t v, real_t cap)
 { G->nodes[v].tr_cap += cap; }
 
-template <typename real_t, typename index_t, typename comp_t>
-inline Cp_graph<real_t, index_t, comp_t>*
-    Cp<real_t, index_t, comp_t>::get_parallel_flow_graph()
+TPL inline Cp_graph<real_t, index_t, comp_t>* CP::get_parallel_flow_graph()
 { return new Cp_graph<real_t, index_t, comp_t>(*G); }
 
-template <typename real_t, typename index_t, typename comp_t>
-inline void Cp<real_t, index_t, comp_t>::set_saturation(comp_t rv,
-    bool saturation)
+TPL inline void CP::set_saturation(comp_t rv, bool saturation)
 { G->nodes[comp_list[first_vertex[rv]]].saturation = saturation; }
 
-template <typename real_t, typename index_t, typename comp_t>
-inline bool Cp<real_t, index_t, comp_t>::is_saturated(comp_t rv)
+TPL inline bool CP::is_saturated(comp_t rv)
 { return G->nodes[comp_list[first_vertex[rv]]].saturation; }
 
-/* label_t is the type associated to the space to which the labels belong, it
- * is usually real_t, and if multidimensional, this must be specified in the
- * parameter D (e.g. for R^3, specify label_t = real_t and D = 3) */
-//
-//    const size_t D; // dimension of the data; total size is V*D
-//
-//   label_t* get_reduced_values();
-//
-///* reduced iterate (values of the components) */
-//  label_t *rX, *last_rX; 
+#undef TPL
+#undef CP

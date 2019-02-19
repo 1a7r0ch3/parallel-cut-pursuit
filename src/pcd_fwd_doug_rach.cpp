@@ -20,13 +20,15 @@
 #define Id_W_(i, id) (wshape == MONODIM ? Id_W[(i)] : Id_W[(id)])
 #define aux_idx_(j) (aux_idx ? aux_idx[(j)] : ((j) % size))
 
+#define TPL template <typename real_t, typename index_t>
+#define PFDR Pfdr<real_t, index_t>
+
 using namespace std;
 
-template <typename real_t, typename index_t>
-Pfdr<real_t, index_t>::Pfdr(index_t size, size_t aux_size,
-    const index_t* aux_idx, size_t D, Condshape gashape, Condshape wshape) :
-    Pcd_prox<real_t>(size*D), size(size), aux_size(aux_size),
-    D(D), aux_idx(aux_idx), gashape(gashape), wshape(wshape)
+TPL PFDR::Pfdr(index_t size, size_t aux_size, const index_t* aux_idx, size_t D,
+    Condshape gashape, Condshape wshape) : Pcd_prox<real_t>(size*D),
+    size(size), aux_size(aux_size), D(D), aux_idx(aux_idx), gashape(gashape),
+    wshape(wshape)
 {
     set_name("Preconditioned forward-Douglas-Rachford algorithm");
     rho = ONE;
@@ -36,16 +38,11 @@ Pfdr<real_t, index_t>::Pfdr(index_t size, size_t aux_size,
     Ga = Ga_grad_f = Z = W = Z_Id = Id_W = nullptr;
 }
 
-template <typename real_t, typename index_t>
-Pfdr<real_t, index_t>::~Pfdr()
-{ free(Ga); free(Z); free(W); free(Ga_grad_f); free(Lmut); }
+TPL PFDR::~Pfdr(){ free(Ga); free(Z); free(W); free(Ga_grad_f); free(Lmut); }
 
-template <typename real_t, typename index_t>
-void Pfdr<real_t, index_t>::set_relaxation(real_t rho){ this->rho = rho; }
+TPL void PFDR::set_relaxation(real_t rho){ this->rho = rho; }
 
-template <typename real_t, typename index_t>
-void Pfdr<real_t, index_t>::set_lipschitz_param(const real_t* L,
-    real_t l, Condshape lshape)
+TPL void PFDR::set_lipschitz_param(const real_t* L, real_t l, Condshape lshape)
 {
     this->L = L;
     this->l = l;
@@ -54,22 +51,16 @@ void Pfdr<real_t, index_t>::set_lipschitz_param(const real_t* L,
     this->lipschcomput = USER;
 }
 
-template <typename real_t, typename index_t>
-void Pfdr<real_t, index_t>::set_lipschitz_param(Lipschcomput lipschcomput)
+TPL void PFDR::set_lipschitz_param(Lipschcomput lipschcomput)
 { this->lipschcomput = lipschcomput; }
 
-template <typename real_t, typename index_t>
-void Pfdr<real_t, index_t>::set_auxiliary(real_t* Z){ this->Z = Z; }
+TPL void PFDR::set_auxiliary(real_t* Z){ this->Z = Z; }
 
-template <typename real_t, typename index_t>
-real_t* Pfdr<real_t, index_t>::get_auxiliary(){ return this->Z; }
+TPL real_t* PFDR::get_auxiliary(){ return this->Z; }
 
-template <typename real_t, typename index_t>
-void Pfdr<real_t, index_t>::compute_lipschitz_metric()
-{ l = ZERO; lshape = SCALAR; }
+TPL void PFDR::compute_lipschitz_metric(){ l = ZERO; lshape = SCALAR; }
 
-template <typename real_t, typename index_t>
-void Pfdr<real_t, index_t>::compute_hess_f()
+TPL void PFDR::compute_hess_f()
 /* default to zero f, can be overriden */
 {
     for (index_t i = 0; i < size; i++){
@@ -78,12 +69,9 @@ void Pfdr<real_t, index_t>::compute_hess_f()
     }
 }
 
-template <typename real_t, typename index_t>
-void Pfdr<real_t, index_t>::add_pseudo_hess_h()
-/* default to zero h, can be overriden */ {}
+TPL void PFDR::add_pseudo_hess_h() /* default to zero h, can be overriden */ {}
 
-template <typename real_t, typename index_t>
-void Pfdr<real_t, index_t>::make_sum_Wi_Id()
+TPL void PFDR::make_sum_Wi_Id()
 {
     if (wshape == SCALAR){
         size_t n = aux_size/size;
@@ -124,8 +112,7 @@ void Pfdr<real_t, index_t>::make_sum_Wi_Id()
     }
 }
 
-template <typename real_t, typename index_t>
-void Pfdr<real_t, index_t>::initialize_auxiliary(){
+TPL void PFDR::initialize_auxiliary(){
     if (!Z){ Z = (real_t*) malloc_check(sizeof(real_t)*aux_size*D); }
     for (size_t j = 0; j < aux_size; j++){
         size_t id = aux_idx_(j)*D;
@@ -135,13 +122,11 @@ void Pfdr<real_t, index_t>::initialize_auxiliary(){
     if (Z_Id){ for (size_t id = 0; id < size*D; id++){ Z_Id[id] = X[id]; } }
 }
 
-template<typename real_t, typename index_t>
-void Pfdr<real_t, index_t>::compute_Ga_grad_f()
+TPL void PFDR::compute_Ga_grad_f()
 /* default to zero f, can be overriden */
 { for (size_t id = 0; id < size*D; id++){ Ga_grad_f[id] = ZERO; } }
 
-template <typename real_t, typename index_t>
-void Pfdr<real_t, index_t>::compute_weighted_average()
+TPL void PFDR::compute_weighted_average()
 {
     #pragma omp parallel for schedule(static) NUM_THREADS(aux_size*D, D)
     for (size_t d = 0; d < D; d++){ 
@@ -159,20 +144,16 @@ void Pfdr<real_t, index_t>::compute_weighted_average()
     }
 }
 
-template<typename real_t, typename index_t>
-void Pfdr<real_t, index_t>::compute_prox_Ga_h()
+TPL void PFDR::compute_prox_Ga_h()
 /* default to zero f, can be overriden */ {}
 
-template<typename real_t, typename index_t>
-real_t Pfdr<real_t, index_t>::compute_f()
+TPL real_t PFDR::compute_f()
 /* default to zero f, can be overriden */ { return ZERO; }
 
-template<typename real_t, typename index_t>
-real_t Pfdr<real_t, index_t>::compute_h()
+TPL real_t PFDR::compute_h()
 /* default to zero f, can be overriden */ { return ZERO; }
 
-template<typename real_t, typename index_t>
-void Pfdr<real_t, index_t>::preconditioning(bool init)
+TPL void PFDR::preconditioning(bool init)
 {
     Pcd_prox<real_t>::preconditioning(init);
 
@@ -285,8 +266,7 @@ void Pfdr<real_t, index_t>::preconditioning(bool init)
     }
 }
 
-template <typename real_t, typename index_t>
-void Pfdr<real_t, index_t>::main_iteration()
+TPL void PFDR::main_iteration()
 {
     /* gradient step, forward = 2 X - Zi - Ga grad(X) */ 
     compute_Ga_grad_f();
@@ -310,15 +290,11 @@ void Pfdr<real_t, index_t>::main_iteration()
     compute_prox_Ga_h(); 
 }
 
-template <typename real_t, typename index_t>
-real_t Pfdr<real_t, index_t>::compute_objective()
+TPL real_t PFDR::compute_objective()
 { return compute_f() + compute_g() + compute_h(); }
 
 /**  instantiate for compilation  **/
 template class Pfdr<float, uint16_t>;
-
 template class Pfdr<float, uint32_t>;
-
 template class Pfdr<double, uint16_t>;
-
 template class Pfdr<double, uint32_t>;
