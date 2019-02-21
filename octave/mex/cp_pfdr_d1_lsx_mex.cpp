@@ -13,10 +13,10 @@
 
 using namespace std;
 
-/* index_t must be able to represent the numbers of vertices and of
- * (undirected) edges in the main graph; comp_t must be able to represent the
- * number of constant connected components in the reduced graph and the number
- * of dimensions */
+/* index_t must be able to represent the number of vertices and of (undirected)
+ * edges in the main graph;
+ * comp_t must be able to represent the number of constant connected components
+ * in the reduced graph, as well as the dimension D */
 typedef uint32_t index_t;
 # define VERTEX_CLASS mxUINT32_CLASS
 # define VERTEX_ID "uint32"

@@ -7,11 +7,14 @@
 #define ZERO ((real_t) 0.0)
 #define ONE ((real_t) 1.0)
 #define EDGE_WEIGHTS_(e) (edge_weights ? edge_weights[(e)] : homo_edge_weight)
-#define NOT_ASSIGNED ((comp_t) -1)
+/* avoid overflows */
+#define MAX_NUM_COMP (std::numeric_limits<comp_t>::max())
+#define rVp1 ((size_t) rV + 1)
+/* specific flags */
+#define NOT_ASSIGNED MAX_NUM_COMP
 #define ASSIGNED ((comp_t) 1)
 #define ASSIGNED_ROOT ((comp_t) 2)
-#define MAX_COMP (std::numeric_limits<comp_t>::max())
-#define NO_EDGE ((index_t) -1)
+#define NO_EDGE (std::numeric_limits<index_t>::max())
 
 #define TPL template <typename real_t, typename index_t, typename comp_t>
 #define CP Cp<real_t, index_t, comp_t>
@@ -236,11 +239,28 @@ TPL void CP::single_connected_component()
     set_saturation(0, false);
 }
 
+TPL void CP::new_connected_component(comp_t& rv, index_t& comp_size)
+{
+    if (rv == rV){
+        rV = (size_t) 2*rV < MAX_NUM_COMP ? (size_t) 2*rV : MAX_NUM_COMP;
+        first_vertex = (index_t*) realloc_check(first_vertex,
+            sizeof(index_t)*rVp1);
+    }
+    first_vertex[rv + 1] = first_vertex[rv] + comp_size;
+    set_saturation(rv, false);
+    rv++; comp_size = 0;
+    if (rv == MAX_NUM_COMP){
+        cerr << "Cut-pursuit: number of components greater than can be "
+            "represented by comp_t (" << MAX_COMP_NUM << ")." << endl;
+        exit(EXIT_FAILURE);
+    }
+}
+
 TPL void CP::arbitrary_connected_components()
 {
     index_t max_comp_size = V/rV + 1;
     free(first_vertex);
-    first_vertex = (index_t*) malloc_check(sizeof(index_t)*(rV + 1));
+    first_vertex = (index_t*) malloc_check(sizeof(index_t)*rVp1);
 
     /* cleanup assigned components */
     for (index_t v = 0; v < V; v++){ comp_assign[v] = NOT_ASSIGNED; }
@@ -269,39 +289,20 @@ TPL void CP::arbitrary_connected_components()
                 comp_assign[w] = rv;
                 comp_size++;
                 comp_list[j++] = w;
-                if (comp_size == max_comp_size){ // change component
-                    if (rv == rV){
-                        rV *= 2;
-                        first_vertex = (index_t*) realloc_check(first_vertex,
-                            sizeof(index_t)*(rV + 1));
-                    }
-                    first_vertex[rv + 1] = first_vertex[rv] + comp_size;
-                    set_saturation(rv, false);
-                    rv++; comp_size = 0;
+                if (comp_size == max_comp_size){ // component is finished
+                    new_connected_component(comp_t& rv, index_t& comp_size);
                 }
             }
         } // the current connected component cannot grow anymore
-        if (comp_size > 0){ /* change current component */
-            if (rv == rV){
-                rV *= 2;
-                first_vertex = (index_t*) realloc_check(first_vertex,
-                    sizeof(index_t)*(rV + 1));
-            }
-            first_vertex[rv + 1] = first_vertex[rv] + comp_size;
-            set_saturation(rv, false);
-            rv++; comp_size = 0;
+        if (comp_size > 0){ // add the current component
+            new_connected_component(comp_t& rv, index_t& comp_size);
         }
     }
     /* update components lists and assignments */
-    if (rv > MAX_COMP){
-        cerr << "Cut-pursuit: number of components (" << rv << ") greater "
-            << "than can be represented by comp_t (" << MAX_COMP << ")" << endl;
-        exit(EXIT_FAILURE);
-    }
     if (rV > rv){
         rV = rv;
         first_vertex = (index_t*) realloc_check(first_vertex,
-            sizeof(index_t)*(rV + 1));
+            sizeof(index_t)*rVp1);
     }
 }
 
@@ -318,8 +319,8 @@ TPL void CP::assign_connected_components()
 
     /* translate 'comp_assign' into dual representation 'comp_list' */
     free(first_vertex);
-    first_vertex = (index_t*) malloc_check(sizeof(index_t)*(rV + 1));
-    for (comp_t rv = 0; rv < rV + 1; rv++){ first_vertex[rv] = 0; }
+    first_vertex = (index_t*) malloc_check(sizeof(index_t)*rVp1);
+    for (comp_t rv = 0; rv < rVp1; rv++){ first_vertex[rv] = 0; }
     for (index_t v = 0; v < V; v++){ first_vertex[comp_assign[v] + 1]++; }
     for (comp_t rv = 1; rv < rV - 1; rv++){
         first_vertex[rv + 1] += first_vertex[rv];
@@ -341,7 +342,7 @@ TPL comp_t CP::compute_connected_components()
     /* cleanup assigned components */
     for (index_t v = 0; v < V; v++){ comp_assign[v] = NOT_ASSIGNED; }
 
-    index_t rVtmp = 0; // identify and count components
+    index_t rVtmp = 0; // identify and count components, prevent overflow
     /* new connected components hierarchically derives from the previous ones,
      * we can thus compute them in parallel along previous components */
     #pragma omp parallel for schedule(dynamic) NUM_THREADS(2*E, rV) \
@@ -385,15 +386,16 @@ TPL comp_t CP::compute_connected_components()
         }
     }
 
-    /* update components lists and assignments */
-    if (rVtmp > MAX_COMP){
+    if (rVtmp > MAX_COMP_NUM){
         cerr << "Cut-pursuit: number of components (" << rVtmp << ") greater "
            << "than can be represented by comp_t (" << MAX_COMP << ")" << endl;
         exit(EXIT_FAILURE);
     }
+
+    /* update components lists and assignments */
     rV = rVtmp;
     free(first_vertex);
-    first_vertex = (index_t*) malloc_check(sizeof(index_t)*(rV + 1));
+    first_vertex = (index_t*) malloc_check(sizeof(index_t)*rVp1);
     comp_t rv = (comp_t) -1;
     for (index_t v = 0; v < V; v++){
         index_t u = comp_list[v] = get_tmp_comp_list(v);
@@ -574,7 +576,7 @@ TPL index_t CP::merge()
     /* finalize and shrink arrays to fit the reduced number of components */
     first_vertex[rV = rn] = V;
     first_vertex = (index_t*) realloc_check(first_vertex,
-        sizeof(index_t)*(rV + 1));
+        sizeof(index_t)*rVp1);
     resize_comp_values();
     for (index_t v = 0; v < V; v++){ /* update components assignments */
         comp_list[v] = get_tmp_comp_list(v);

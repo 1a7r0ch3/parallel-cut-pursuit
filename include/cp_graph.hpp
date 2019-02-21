@@ -29,33 +29,36 @@
  *
  * ========================
 
-    Copyright Vladimir Kolmogorov (vnk@ist.ac.at), Yuri Boykov (yuri@csd.uwo.ca) 
+   Copyright Vladimir Kolmogorov (vnk@ist.ac.at), Yuri Boykov (yuri@csd.uwo.ca)
 
-    This file is modified from MAXFLOW.
+   This file is modified from MAXFLOW.
 
-    MAXFLOW is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+   MAXFLOW is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
 
-    MAXFLOW is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+   MAXFLOW is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with MAXFLOW.  If not, see <http://www.gnu.org/licenses/>.       
+   You should have received a copy of the GNU General Public License
+   along with MAXFLOW.  If not, see <http://www.gnu.org/licenses/>.       
 *============================================================================*/
 #pragma once
 #include <iostream>
 #include "block.hpp"
 
-template <typename real_t, typename index_t, typename comp_t>
-class Cp;
+/* declare cut-pursuit base class for friendship */
+template <typename real_t, typename index_t, typename comp_t> class Cp;
 
-/* index_t must be able to represent the numbers of vertices and of
- * (undirected) edges in the main graph; comp_t must be able to represent the
- * numbers of constant connected components in the reduced graph */
+/* real_t is the real numeric type, used for objective functional computation
+ * and thus for edge weights and flow graph capacities;
+ * index_t must be able to represent the number of vertices and of (undirected)
+ * edges in the main graph;
+ * comp_t must be able to represent the number of constant connected components
+ * in the reduced graph */
 template <typename real_t, typename index_t, typename comp_t> class Cp_graph
 {
     friend class Cp<real_t, index_t, comp_t>;

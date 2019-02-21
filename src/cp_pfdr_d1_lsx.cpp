@@ -19,9 +19,8 @@
 
 using namespace std;
 
-TPL CP_D1_LSX::Cp_d1_lsx(index_t V, index_t E,
-    const index_t* first_edge, const index_t* adj_vertices, size_t D,
-    const real_t* Y) :
+TPL CP_D1_LSX::Cp_d1_lsx(index_t V, index_t E, const index_t* first_edge,
+    const index_t* adj_vertices, size_t D, const real_t* Y) :
     Cp_d1<real_t, index_t, comp_t>(V, E, first_edge, adj_vertices, D, D11),
     Y(Y)
 {
@@ -29,9 +28,9 @@ TPL CP_D1_LSX::Cp_d1_lsx(index_t V, index_t E,
     static_assert(numeric_limits<real_t>::is_iec559,
         "Cut-pursuit d1 loss simplex: real_t must satisfy IEEE 754.");
 
-    if (numeric_limits<comp_t>::max() < D - 1){
-        cerr << "Cut-pursuit d1 loss simplex: comp_t must be able to "
-            "represent one less than the dimension (" << D - 1 << ")." << endl;
+    if (numeric_limits<comp_t>::max() < D){
+        cerr << "Cut-pursuit d1 loss simplex: comp_t must be able to represent"
+            "the dimension D (" << D << ")." << endl;
         exit(EXIT_FAILURE);
     }
 
@@ -145,7 +144,7 @@ TPL void CP_D1_LSX::solve_reduced_problem()
 TPL index_t CP_D1_LSX::split()
 {
     index_t activation = 0;
-    real_t *grad = (real_t*) malloc_check(sizeof(real_t)*D*V);
+    real_t* grad = (real_t*) malloc_check(sizeof(real_t)*D*V);
 
     /**  gradient of differentiable part  **/ 
     real_t c = (ONE - loss), q = loss/D, r = q/c; // useful for KLs

@@ -44,9 +44,12 @@
 #define DIAG_ATA ((size_t) -1)
 #define IS_ATA(N) (N == FULL_ATA || N == DIAG_ATA)
 
-/* index_t must be able to represent the numbers of vertices and of
- * (undirected) edges in the main graph; comp_t must be able to represent the
- * numbers of constant connected components in the reduced graph */
+/* real_t is the real numeric type, used for the base field and for the
+ * objective functional computation;
+ * index_t must be able to represent the number of vertices and of (undirected)
+ * edges in the main graph;
+ * comp_t must be able to represent the number of constant connected components
+ * in the reduced graph */
 template <typename real_t, typename index_t, typename comp_t>
 class Cp_d1_ql1b : public Cp_d1<real_t, index_t, comp_t>
 {

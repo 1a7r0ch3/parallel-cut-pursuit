@@ -33,10 +33,12 @@
 #define LINEAR ((real_t) 0.0)
 #define QUADRATIC ((real_t) 1.0)
 
-/* index_t must be able to represent the numbers of vertices and of
- * (undirected) edges in the main graph; comp_t must be able to represent the
- * numbers of constant connected components in the reduced graph, as well as
- * one less than the dimension D */
+/* real_t is the real numeric type, used for the base field and for the
+ * objective functional computation;
+ * index_t must be able to represent the number of vertices and of (undirected)
+ * edges in the main graph;
+ * comp_t must be able to represent the number of constant connected components
+ * in the reduced graph, as well as the dimension D */
 template <typename real_t, typename index_t, typename comp_t>
 class Cp_d1_lsx : public Cp_d1<real_t, index_t, comp_t>
 {
@@ -92,8 +94,8 @@ private:
      * 1 for quadratic (macro QUADRATIC)
      *     f(x) = 1/2 ||y - x||_{l2,w}^2 ,
      * with  ||y - x||_{l2,w}^2 = sum_{v,d} w_v (y_{v,d} - x_{v,d})^2 ;
-     * 0 < loss < 1 for smoothed Kullback-Leibler divergence
-     *     f(x) = sum_v w_v KLs(x_v, y_v),
+     * 0 < loss < 1 for smoothed Kullback-Leibler divergence (or cross-entropy)
+     *     f(x) = sum_v w_v KLs(y_v, x_v),
      * with KLs(y_v, x_v) = KL(s u + (1 - s) y_v ,  s u + (1 - s) x_v),
      * where KL is the regular Kullback-Leibler divergence,
      *       u is the uniform discrete distribution over {1,...,D}, and

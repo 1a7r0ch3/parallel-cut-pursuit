@@ -10,9 +10,11 @@
 #pragma once
 #include "cut_pursuit.hpp"
 
-/* index_t must be able to represent the numbers of vertices and of
- * (undirected) edges in the main graph; comp_t must be able to represent the
- * numbers of constant connected components in the reduced graph */
+/* real_t is the real numeric type, used for the base field and for the
+ * objective functional computation;
+ * index_t must be able to represent the numbers of vertices and of
+ * (undirected) edges in the main graph; comp_t must be able to represent one
+ * plus the number of constant connected components in the reduced graph */
 template <typename real_t, typename index_t, typename comp_t>
 class Cp_d1 : public Cp<real_t, index_t, comp_t>
 {
@@ -66,14 +68,6 @@ protected:
     real_t compute_graph_d1();
 
     /**  type resolution for base template class members  **/
-    using Cp<real_t, index_t, comp_t>::merge_chains_root;
-    using Cp<real_t, index_t, comp_t>::merge_components;
-    using Cp<real_t, index_t, comp_t>::merge_count;
-    using Cp<real_t, index_t, comp_t>::set_saturation;
-    using Cp<real_t, index_t, comp_t>::set_inactive;
-    using Cp<real_t, index_t, comp_t>::is_active;
-    using Cp<real_t, index_t, comp_t>::get_tmp_comp_list;
-    using Cp<real_t, index_t, comp_t>::set_tmp_comp_list;
     using Cp<real_t, index_t, comp_t>::eps;
     using Cp<real_t, index_t, comp_t>::dif_tol;
     using Cp<real_t, index_t, comp_t>::V;
@@ -82,8 +76,6 @@ protected:
     using Cp<real_t, index_t, comp_t>::adj_vertices; 
     using Cp<real_t, index_t, comp_t>::rV;
     using Cp<real_t, index_t, comp_t>::rE;
-    using Cp<real_t, index_t, comp_t>::comp_assign;
-    using Cp<real_t, index_t, comp_t>::comp_list;
     using Cp<real_t, index_t, comp_t>::first_vertex;
     using Cp<real_t, index_t, comp_t>::reduced_edge_weights;
     using Cp<real_t, index_t, comp_t>::reduced_edges;
@@ -104,6 +96,10 @@ private:
 
     /* merge neighboring components with almost equal values */
     void compute_merge_chains() override;
+
+    /**  type resolution for base template class members  **/
+    using Cp<real_t, index_t, comp_t>::merge_chains_root;
+    using Cp<real_t, index_t, comp_t>::merge_components;
 };
 
 template <typename real_t, typename index_t, typename comp_t> 

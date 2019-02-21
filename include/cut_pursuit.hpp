@@ -36,10 +36,11 @@
 #define ACTIVE_EDGE ((real_t) -1.0) 
 
 /* real_t is the real numeric type, used for objective functional computation
- * and thus for edge weights, and flow graph capacities;
- * index_t must be able to represent the numbers of vertices and of
- * (undirected) edges in the main graph; comp_t must be able to represent the
- * numbers of constant connected components in the reduced graph */
+ * and thus for edge weights and flow graph capacities;
+ * index_t must be able to represent the number of vertices and of (undirected)
+ * edges in the main graph;
+ * comp_t must be able to represent the number of constant connected components
+ * in the reduced graph */
 template <typename real_t, typename index_t, typename comp_t> class Cp
 {
 public:
@@ -273,6 +274,9 @@ private:
 
     /* initialize with only one component and reduced graph accordingly */
     void single_connected_component();
+
+    /* auxiliary function for setting a new connected component */
+    void new_connected_component(comp_t& rv, index_t& comp_size);
 
     /* initialize approximately rV arbitrary connected components */
     void arbitrary_connected_components();
