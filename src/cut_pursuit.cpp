@@ -251,7 +251,7 @@ TPL void CP::new_connected_component(comp_t& rv, index_t& comp_size)
     rv++; comp_size = 0;
     if (rv == MAX_NUM_COMP){
         cerr << "Cut-pursuit: number of components greater than can be "
-            "represented by comp_t (" << MAX_COMP_NUM << ")." << endl;
+            "represented by comp_t (" << MAX_NUM_COMP << ")." << endl;
         exit(EXIT_FAILURE);
     }
 }
@@ -265,7 +265,8 @@ TPL void CP::arbitrary_connected_components()
     /* cleanup assigned components */
     for (index_t v = 0; v < V; v++){ comp_assign[v] = NOT_ASSIGNED; }
 
-    index_t rv = 0, comp_size = 0; // rv of type index_t to avoid overflow
+    index_t comp_size = 0;
+    comp_t rv = 0; // identify and count components
     first_vertex[0] = 0;
     index_t i = 0, j = 0; // indices in connected components list
     for (index_t u = 0; u < V; u++){
@@ -289,13 +290,13 @@ TPL void CP::arbitrary_connected_components()
                 comp_assign[w] = rv;
                 comp_size++;
                 comp_list[j++] = w;
-                if (comp_size == max_comp_size){ // component is finished
-                    new_connected_component(comp_t& rv, index_t& comp_size);
+                if (comp_size == max_comp_size){ // change component
+                    new_connected_component(rv, comp_size);
                 }
             }
         } // the current connected component cannot grow anymore
         if (comp_size > 0){ // add the current component
-            new_connected_component(comp_t& rv, index_t& comp_size);
+            new_connected_component(rv, comp_size);
         }
     }
     /* update components lists and assignments */
@@ -386,9 +387,10 @@ TPL comp_t CP::compute_connected_components()
         }
     }
 
-    if (rVtmp > MAX_COMP_NUM){
+    if (rVtmp > MAX_NUM_COMP){
         cerr << "Cut-pursuit: number of components (" << rVtmp << ") greater "
-           << "than can be represented by comp_t (" << MAX_COMP << ")" << endl;
+            << "than can be represented by comp_t (" << MAX_NUM_COMP << ")"
+            << endl;
         exit(EXIT_FAILURE);
     }
 

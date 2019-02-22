@@ -198,10 +198,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     if ((!mxIsEmpty(prhs[0]) && mxIsDouble(prhs[0])) ||
         (mxGetNumberOfElements(prhs[1]) > 1 && mxIsDouble(prhs[1])) || 
         (nrhs > 5 && !mxIsEmpty(prhs[5]) && mxIsDouble(prhs[5]))){
-        check_args(nrhs, prhs, args_real_t, n_real_t, mxDOUBLE_CLASS, "double");
+        check_args(nrhs, prhs, args_real_t, n_real_t, mxDOUBLE_CLASS,
+            "double");
         cp_pfdr_d1_ql1b_mex<double, mxDOUBLE_CLASS>(nlhs, plhs, nrhs, prhs);
     }else{
-        check_args(nrhs, prhs, args_real_t, n_real_t, mxSINGLE_CLASS, "single");
+        check_args(nrhs, prhs, args_real_t, n_real_t, mxSINGLE_CLASS,
+            "single");
         cp_pfdr_d1_ql1b_mex<float, mxSINGLE_CLASS>(nlhs, plhs, nrhs, prhs);
     }
 }
