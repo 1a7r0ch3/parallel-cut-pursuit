@@ -102,6 +102,8 @@ suppa = abss > (m/2);
 DSa = 2*sum(supp0 & suppa)/(sum(supp0) + sum(suppa));
 fprintf('Dice score: raw %.2f; approx (discard less significant with 2-means) %.2f\n\n', DS, DSa);
 
+return
+
 % print retrieved activity
 figure(2), clf, colormap(colMap);
 xcol = floor((x - x0min)/(x0max - x0min)*numberOfColors) + 2;

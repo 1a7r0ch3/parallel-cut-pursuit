@@ -79,11 +79,14 @@ public:
      * check if parallel copies still exists in memory */
 	~Cp_graph();
 
-	// Adds node(s) to the graph. By default, one node is added (num=1); then first call returns 0, second call returns 1, and so on. 
-	// If num>1, then several nodes are added, and index_t of the first one is returned.
+	/* Adds node(s) to the graph. By default, one node is added (num=1);
+     * then first call returns 0, second call returns 1, and so on. 
+	 * If num > 1, then several nodes are added, and index_t of the first one
+	 * is returned. */
 	index_t add_node(index_t num = 1);
 
-	// Adds a bidirectional edge between 'i' and 'j' with the weights 'cap' and 'rev_cap'.
+	/* Adds a bidirectional edge between 'i' and 'j' with the weights 'cap'
+     * and 'rev_cap' */
 	void add_edge(index_t i, index_t j, real_t cap, real_t rev_cap);
 
 	// Adds new edges 'SOURCE->i' and 'i->SINK' with corresponding weights.

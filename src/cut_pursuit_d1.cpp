@@ -41,8 +41,8 @@ TPL void CP_D1::free_comp_values(){ free(rX); rX = nullptr; }
 
 TPL void CP_D1::copy_last_comp_values()
 {
-    last_rX = (real_t*) malloc_check(sizeof(real_t)*V*D);
-    for (size_t i = 0; i < rV*D; i++){ last_rX[i] = rX[i]; }
+    last_rX = (real_t*) malloc_check(sizeof(real_t)*D*rV);
+    for (size_t i = 0; i < D*rV; i++){ last_rX[i] = rX[i]; }
 }
 
 TPL void CP_D1::free_last_comp_values(){ free(last_rX); last_rX = nullptr; }
@@ -72,16 +72,21 @@ TPL bool CP_D1::is_almost_equal(comp_t ru, comp_t rv)
     return dif <= dif_tol*amp;
 }
 
-TPL void CP_D1::compute_merge_chains()
+TPL comp_t CP_D1::compute_merge_chains()
 {
+    comp_t merge_count = 0;
     for (size_t re = 0; re < rE; re++){
         comp_t ru = reduced_edges[2*re];
         comp_t rv = reduced_edges[2*re + 1];
         /* get the root of each component's chain */
-        while(ru != merge_chains_root[ru]){ ru = merge_chains_root[ru]; }
-        while(rv != merge_chains_root[rv]){ rv = merge_chains_root[rv]; }
-        if (ru != rv && is_almost_equal(ru, rv)){ merge_components(ru, rv); }
+        ru = get_merge_chain_root(ru);
+        rv = get_merge_chain_root(rv);
+        if (ru != rv && is_almost_equal(ru, rv)){
+            merge_components(ru, rv);
+            merge_count++;
+        }
     }
+    return merge_count;
 }
 
 TPL real_t CP_D1::compute_graph_d1()

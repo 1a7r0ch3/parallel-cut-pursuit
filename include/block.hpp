@@ -3,7 +3,7 @@
 
 /* Version slightly modified by Hugo Raguet 2016 
  * different error handling (no error function, message handed to
- * standard error */
+ * standard error) */
 
 /*
 	Template classes Block and DBlock

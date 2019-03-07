@@ -94,12 +94,12 @@ private:
     /* test if two components are sufficiently close to merge */
     bool is_almost_equal(comp_t ru, comp_t rv);
 
-    /* merge neighboring components with almost equal values */
-    void compute_merge_chains() override;
+    /* compute the merge chains and return the number of effective merges */
+    comp_t compute_merge_chains() override;
 
     /**  type resolution for base template class members  **/
-    using Cp<real_t, index_t, comp_t>::merge_chains_root;
     using Cp<real_t, index_t, comp_t>::merge_components;
+    using Cp<real_t, index_t, comp_t>::get_merge_chain_root;
 };
 
 template <typename real_t, typename index_t, typename comp_t> 

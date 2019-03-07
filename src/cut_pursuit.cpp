@@ -8,7 +8,6 @@
 #define ONE ((real_t) 1.0)
 #define EDGE_WEIGHTS_(e) (edge_weights ? edge_weights[(e)] : homo_edge_weight)
 /* avoid overflows */
-#define MAX_NUM_COMP (std::numeric_limits<comp_t>::max())
 #define rVp1 ((size_t) rV + 1)
 /* specific flags */
 #define NOT_ASSIGNED MAX_NUM_COMP
@@ -28,8 +27,8 @@ TPL CP::Cp(index_t V, index_t E,
     /* construct graph */
     G = new Cp_graph<real_t, index_t, comp_t>(V, E);
     G->add_node(V);
-    /* d1 edges */
-    for (index_t v = 0; v < V; v++){ /* will run along all edges */
+    /* edges */
+    for (index_t v = 0; v < V; v++){
         for (index_t e = first_edge[v]; e < first_edge[v + 1]; e++){
             G->add_edge(v, adj_vertices[e], ZERO, ZERO);
         }
@@ -453,12 +452,11 @@ TPL void CP::compute_reduced_graph()
                 index_t re = reduced_edge_to[rv];
                 if (re == NO_EDGE){ // a new edge must be created
                     if (rE == rEtmp){ // reach buffer size
-                        rEtmp *= 2;
+                        rEtmp += rEtmp;
                         reduced_edges = (comp_t*) realloc_check(reduced_edges,
                             sizeof(comp_t)*2*rEtmp);
-                        reduced_edge_weights =
-                            (real_t*) realloc_check(reduced_edge_weights,
-                            sizeof(real_t)*rEtmp);
+                        reduced_edge_weights = (real_t*) realloc_check(
+                            reduced_edge_weights, sizeof(real_t)*rEtmp);
                     }
                     reduced_edges[2*rE] = ru;
                     reduced_edges[2*rE + 1] = rv;
@@ -473,7 +471,7 @@ TPL void CP::compute_reduced_graph()
         * with certain implementation of PFDR where isolated vertices must be
         * linked to themselves */
             if (rE == rEtmp){ // reach buffer size
-                rEtmp *= 2;
+                rEtmp += rEtmp;
                 reduced_edges = (comp_t*) realloc_check(reduced_edges,
                     sizeof(comp_t)*2*rEtmp);
                 reduced_edge_weights = (real_t*) realloc_check(
@@ -532,7 +530,6 @@ TPL void CP::merge_components(comp_t& ru, comp_t& rv)
     merge_chains_leaf[ru] = merge_chains_leaf[rv];
     merge_chains_root[rv] = merge_chains_root[merge_chains_leaf[rv]] = ru;
     set_saturation(ru, false); // component has changed
-    merge_count++;
 }
 
 TPL index_t CP::merge()
@@ -542,12 +539,11 @@ TPL index_t CP::merge()
     merge_chains_next = (comp_t*) malloc_check(sizeof(comp_t)*rV);
     merge_chains_leaf = (comp_t*) malloc_check(sizeof(comp_t)*rV);
     for (comp_t rv = 0; rv < rV; rv++){
-        merge_chains_root[rv] = rv;
-        merge_chains_next[rv] = rv;
+        merge_chains_root[rv] = CHAIN_ROOT;
+        merge_chains_next[rv] = CHAIN_LEAF;
         merge_chains_leaf[rv] = rv;
     }
-    merge_count = 0;
-    compute_merge_chains();
+    comp_t merge_count = compute_merge_chains();
     if (!merge_count){ return 0; }
 
     /* construct a new version of 'comp_list' in temporary storage and update
@@ -556,18 +552,17 @@ TPL index_t CP::merge()
     comp_t rn = 0; // component number
     index_t i = 0; // index in the new comp_list
     for (comp_t ru = 0; ru < rV; ru++){
-        if (merge_chains_root[ru] != ru){ continue; }
+        if (merge_chains_root[ru] != CHAIN_ROOT){ continue; }
         /* otherwise ru is a root, create the corresponding new component */
         copy_component_value(ru, rn); // rn <= ru, rX can be modified in-place 
         comp_t rv = ru; 
         index_t first = i; // holds index of first vertex of the component
-        while (true){
+        while (rv != CHAIN_LEAF){
             new_comp_id[rv] = rn;
             for (index_t v = first_vertex[rv]; v < first_vertex[rv + 1]; v++){
                 set_tmp_comp_list(i++, comp_list[v]);
             }
-            if (merge_chains_next[rv] == rv){ break; } // end of chain
-            else{ rv = merge_chains_next[rv]; }
+            rv = merge_chains_next[rv];
         }
         /* the root of each chain is the smallest component in the chain, so
          * now that 'rn' new components have been constructed, the first 'rn'
@@ -585,11 +580,10 @@ TPL index_t CP::merge()
         comp_assign[v] = new_comp_id[comp_assign[v]];
     }
 
-    free(merge_chains_root);
-    free(merge_chains_next);
-    free(merge_chains_leaf);
-
-    /* update corresponding reduced edges */
+    /* update corresponding reduced edges;
+     * some edges will appear several times in the list, important thing is
+     * that the corresponding weights sum up to the right quantity;
+     * note that rE will be an upper bound of the actual number of edges */
     size_t new_re = 0;
     for (size_t re = 0; re < rE; re++){
         comp_t new_ru = new_comp_id[reduced_edges[2*re]];
@@ -601,11 +595,15 @@ TPL index_t CP::merge()
             new_re++;
         }
     }
-    rE = new_re; // actually only upper bound, some edges might appear twice
+    rE = new_re;
     reduced_edges = (comp_t*) realloc_check(reduced_edges,
             sizeof(comp_t)*2*rE);
     reduced_edge_weights = (real_t*) realloc_check(reduced_edge_weights,
             sizeof(real_t)*rE);
+
+    free(merge_chains_root);
+    free(merge_chains_next);
+    free(merge_chains_leaf);
 
     /* deactivate corresponding edges */
     index_t deactivation = 0;

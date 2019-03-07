@@ -9,6 +9,9 @@
     /* rough minimum number of operations per thread */
     #define MIN_OPS_PER_THREAD 1000
     #include <cstdint>  // requires C++11, needed for uintmax_t
+#else /* provide default definitions for basic openmp queries */
+static inline int omp_get_num_procs(){ return 1; }
+static inline int omp_get_thread_num(){ return 0; }
 #endif
 
 /* num_ops is a rough estimation of the total number of operations 

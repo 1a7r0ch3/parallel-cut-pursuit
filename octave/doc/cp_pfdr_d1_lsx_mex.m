@@ -108,14 +108,13 @@ function [Comp, rX, it, Obj, Time, Dif] = cp_pfdr_d1_lsx_mex(loss, Y, ...
 % rX   - values of eachcomponents of the minimizer, array of length rV (real);
 %        the actual minimizer is then reconstructed as X = rX(Comp + 1);
 % it   - actual number of cut-pursuit iterations performed
-% Obj  - the values of the objective functional along iterations
-%        (array of length cp_it_max + 1 with it + 1 nonzero values)
-%        in the precomputed A^t A version, a constant 1/2||Y||^2 in the
-%        quadratic part is omited
-% Time - if requested, the elapsed time along iterations
-%        (array of length cp_it_max + 1 with cp_it + 1 nonzero values)
+% Obj  - the values of the objective functional along iterations (array of
+%        length it + 1); in the precomputed A^t A version, a constant
+%        1/2||Y||^2 in the quadratic part is omited
+% Time - if requested, the elapsed time along iterations (array of length
+%        cp_it + 1)
 % Dif  - if requested, the iterate evolution along iterations
-%        (array of length cp_it_max with cp_it nonzero values)
+%        (array of length cp_it)
 % 
 % Parallel implementation with OpenMP API.
 %

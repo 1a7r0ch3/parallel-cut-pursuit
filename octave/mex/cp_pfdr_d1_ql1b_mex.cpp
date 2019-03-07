@@ -29,6 +29,12 @@ typedef uint16_t comp_t;
 // # define COMP_CLASS mxUINT32_CLASS
 // # define COMP_ID "uint32"
 
+/* arrays with arguments type */
+static const int args_real_t[] = {0, 1, 4, 5, 6};
+static const int n_real_t = 4;
+static const int args_index_t[] = {2, 3};
+static const int n_index_t = 2;
+
 /* function for checking arguments type */
 static void check_args(int nrhs, const mxArray *prhs[], const int* args,
     int n, mxClassID id, const char* id_name)
@@ -43,14 +49,21 @@ static void check_args(int nrhs, const mxArray *prhs[], const int* args,
     }
 }
 
-/* arrays with arguments type */
-static const int args_real_t[] = {0, 1, 4, 5, 6};
-static const int n_real_t = 4;
-static const int args_index_t[] = {2, 3};
-static const int n_index_t = 2;
+/* resize memory buffer allocated by mxMalloc and create a row vector */
+template <typename type_t>
+static mxArray* resize_and_create_mxRow(type_t* buffer, size_t size,
+    mxClassID id)
+{
+    mxArray* row = mxCreateNumericMatrix(0, 0, id, mxREAL);
+    mxSetM(row, 1);
+    mxSetN(row, size);
+    buffer = (type_t*) mxRealloc((void*) buffer, sizeof(type_t)*size);
+    mxSetData(row, (void*) buffer);
+    return row;
+}
 
 /* template for handling both single and double precisions */
-template<typename real_t, mxClassID mxREAL_CLASS>
+template <typename real_t, mxClassID mxREAL_CLASS>
 static void cp_pfdr_d1_ql1b_mex(int nlhs, mxArray **plhs, int nrhs, \
     const mxArray **prhs)
 {
@@ -144,22 +157,13 @@ static void cp_pfdr_d1_ql1b_mex(int nlhs, mxArray **plhs, int nrhs, \
     comp_t *Comp = (comp_t*) mxGetData(plhs[0]);
     plhs[2] = mxCreateNumericMatrix(1, 1, mxINT32_CLASS, mxREAL);
     int *it = (int*) mxGetData(plhs[2]);
-    double *Time = nullptr;
-    real_t *Obj = nullptr;
-    if (nlhs > 3){
-        plhs[3] = mxCreateNumericMatrix(1, cp_it_max+1, mxREAL_CLASS, mxREAL);
-        Obj = (real_t*) mxGetData(plhs[3]);
-    }
-    if (nlhs > 4){
-        plhs[4] = mxCreateNumericMatrix(1, cp_it_max + 1, mxDOUBLE_CLASS,
-            mxREAL);
-        Time = (double*) mxGetData(plhs[4]);
-    }
-    real_t *Dif = nullptr;
-    if (nlhs > 5){
-        plhs[5] = mxCreateNumericMatrix(1, cp_it_max, mxREAL_CLASS, mxREAL);
-        Dif = (real_t*) mxGetData(plhs[5]);
-    }
+
+    real_t* Obj = nlhs > 3 ?
+        (real_t*) mxMalloc(sizeof(real_t)*(cp_it_max + 1)) : nullptr;
+    double* Time = nlhs > 4 ?
+        (double*) mxMalloc(sizeof(double)*(cp_it_max + 1)) : nullptr;
+    real_t *Dif = nlhs > 5 ?
+        (real_t*) mxMalloc(sizeof(double)*cp_it_max) : nullptr;
 
     /**  cut-pursuit with preconditioned forward-Douglas-Rachford  **/
 
@@ -188,6 +192,17 @@ static void cp_pfdr_d1_ql1b_mex(int nlhs, mxArray **plhs, int nrhs, \
     
     cp->set_components(0, nullptr); // prevent Comp to be free()'d
     delete cp;
+
+    /**  resize monitoring arrays and assign to outputs  **/
+    if (nlhs > 3){
+        plhs[3] = resize_and_create_mxRow(Obj, *it + 1, mxREAL_CLASS);
+    }
+    if (nlhs > 4){
+        plhs[4] = resize_and_create_mxRow(Time, *it + 1, mxDOUBLE_CLASS);
+    }
+    if (nlhs > 5){
+        plhs[5] = resize_and_create_mxRow(Dif, *it, mxREAL_CLASS);
+    }
 }
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])

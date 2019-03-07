@@ -34,6 +34,11 @@
 
 /* flag an activated edge on residual capacity of its corresponding arcs */
 #define ACTIVE_EDGE ((real_t) -1.0) 
+/* maximum number of components; no component can have this identifier */
+#define MAX_NUM_COMP (std::numeric_limits<comp_t>::max())
+/* special values for merge step */
+#define CHAIN_ROOT MAX_NUM_COMP
+#define CHAIN_LEAF MAX_NUM_COMP
 
 /* real_t is the real numeric type, used for objective functional computation
  * and thus for edge weights and flow graph capacities;
@@ -188,35 +193,35 @@ protected:
      * represented by arrays of length rV 'merge_chains_root', '_next' and
      * '_leaf'; merge chain involving component rv follows the scheme
      *   root[rv] -> ... -> rv -> next[rv] -> ... -> leaf[rv] ;
-     * NOTA: only _next[rv] is always up-to-date, but:
-     * - root[rv] always points to rv or a preceding component in its chain,
-     * - if rv is the root of its chain, then _root[rv] = rv,
-     * - if rv is the root of its chain, then _leaf[rv] is up-to-date,
-     * in particular, rv is root of its chain if and only if _root[rv] = rv,
-     * and is the leaf of its chain if and only if _next[rv] = rv;
+     * NOTA: macros CHAIN_ROOT and CHAIN_LEAF are special values, and:
+     * - only next[rv] is always up-to-date;
+     * - root[rv] is always a preceding component in its chain, or CHAIN_ROOT
+     *   if rv is a root;
+     * - leaf[rv] is up-to-date if rv is a root;
+     * - rv is the leaf of its chain if, and only if next[rv] = CHAIN_LEAF;
      * an additional requirement is that the root of each chain should be the
      * component in the chain with lowest index */
     comp_t *merge_chains_root, *merge_chains_next, *merge_chains_leaf;
-    comp_t merge_count;
+
+    comp_t get_merge_chain_root(comp_t rv);
 
     /* merge the merge chains of the two given roots;
      * the root of the resulting chain will be the component in the chains
      * with lowest index, and assigned to the parameter ru; the root of the
-     * other chain in the merge is assigned to rv;
-     * increment merge count only if components where not already merged */
+     * other chain in the merge is assigned to rv */
     virtual void merge_components(comp_t& ru, comp_t& rv);
 
-    /* compute the merge chains and count the number of effective merges;
+    /* compute the merge chains and return the number of effective merges;
      * NOTA: the chosen reduced graph structure is just a list of edges,
      * and does not provide the complete list of edges linking to a given
      * vertex, thus getting back to the root of the chains for each edge is
      * O(rE^2), but is expected to be much less in practice */
-    virtual void compute_merge_chains() = 0;
+    virtual comp_t compute_merge_chains() = 0;
 
     /* copy the value of the component 'src' in the value 'dst' */
     virtual void copy_component_value(comp_t src, comp_t dst) = 0;
 
-    /* main routine using the above ones to perform the merge step */
+    /* main routine using the above to perform the merge step */
     index_t merge();
 
     /**  monitoring evolution; set monitor_evolution to true  **/
@@ -342,6 +347,12 @@ TPL inline void CP::set_saturation(comp_t rv, bool saturation)
 
 TPL inline bool CP::is_saturated(comp_t rv)
 { return G->nodes[comp_list[first_vertex[rv]]].saturation; }
+
+TPL inline comp_t CP::get_merge_chain_root(comp_t rv)
+{
+    while (merge_chains_root[rv] != CHAIN_ROOT){ rv = merge_chains_root[rv]; }
+    return rv;
+}
 
 #undef TPL
 #undef CP
