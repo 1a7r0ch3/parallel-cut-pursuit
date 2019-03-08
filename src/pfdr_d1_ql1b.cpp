@@ -83,8 +83,7 @@ TPL void PFDR_D1_QL1B::set_bounds(const real_t* low_bnd, real_t homo_low_bnd,
     this->upp_bnd = upp_bnd; this->homo_upp_bnd = homo_upp_bnd;
 }
 
-TPL
-void PFDR_D1_QL1B::apply_A()
+TPL void PFDR_D1_QL1B::apply_A()
 {
     if (!IS_ATA(N)){ /* direct matricial case, compute residual R = Y - A X */
         #pragma omp parallel for schedule(static) NUM_THREADS(N*V, N)
@@ -300,6 +299,12 @@ TPL void PFDR_D1_QL1B::initialize_iterate()
 
 TPL void PFDR_D1_QL1B::preconditioning(bool init)
 {
+    /* if evolution on the iterates is to be computed, keep the
+     * Lispschitz metric in order to weight the norms */
+    if (dif_tol > ZERO || dif_rcd > ZERO || iterate_evolution){
+        if (lipschcomput == EACH){ lipschcomput = ONCE; }
+    }
+
     Pfdr_d1<real_t, vertex_t>::preconditioning(init);
 
     if (init){ /* reinitialize according to penalizations */
@@ -330,6 +335,21 @@ TPL void PFDR_D1_QL1B::main_iteration()
     Pfdr<real_t, vertex_t>::main_iteration();
     
     apply_A();
+}
+
+TPL real_t PFDR_D1_QL1B::compute_evolution()
+{
+    real_t dif = ZERO;
+    real_t norm = ZERO;
+    #pragma omp parallel for schedule(static) NUM_THREADS(V) \
+        reduction(+:dif, norm)
+    for (vertex_t v = 0; v < V; v++){
+        real_t d = last_X[v] - X[v];
+        dif += lshape == MONODIM ? L[v]*d*d : d*d;
+        norm += lshape == MONODIM ? L[v]*X[v]*X[v] : X[v]*X[v];
+        last_X[v] = X[v];
+    }
+    return sqrt(norm) > eps ? sqrt(dif/norm) : sqrt(dif)/eps;
 }
 
 /**  instantiate for compilation  **/

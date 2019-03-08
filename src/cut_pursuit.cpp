@@ -46,7 +46,8 @@ TPL CP::Cp(index_t V, index_t E,
     objective_values = iterate_evolution = nullptr;
     
     it_max = 10; verbose = 1000;
-    dif_tol = eps = numeric_limits<real_t>::epsilon();
+    dif_tol = ZERO;
+    eps = numeric_limits<real_t>::epsilon();
     monitor_evolution = false;
 }
 

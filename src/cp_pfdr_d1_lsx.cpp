@@ -81,8 +81,13 @@ TPL void CP_D1_LSX::solve_reduced_problem()
         #pragma omp parallel for schedule(static) NUM_THREADS(D*V, D)
         for (size_t d = 0; d < D; d++){
             rX[d] = ZERO;
-            for (size_t vd = d; vd < V*D; vd += D){ rX[d] += Y[vd]; }
+            size_t vd = d;
+            for (index_t v = 0; v < V; v++){
+                rX[d] += LOSS_WEIGHTS_(v)*Y[vd];
+                vd += D;
+            }
         }
+
         if (loss == LINEAR){ /* optimum at simplex corner */
             size_t idx = 0;
             real_t max = rX[idx];
@@ -91,33 +96,36 @@ TPL void CP_D1_LSX::solve_reduced_problem()
             }
             for (size_t d = 0; d < D; d++){ rX[d] = d == idx ? ONE : ZERO; }
         }else{ /* optimum at barycenter */
-            for (size_t d = 0; d < D; d++){ rX[d] /= V; }
+            real_t total_weight = ZERO;
+            #pragma omp parallel for schedule(static) NUM_THREADS(V) \
+                reduction(+:total_weight)
+            for (index_t v = 0; v < V; v++){
+                total_weight += LOSS_WEIGHTS_(v);
+            }
+            for (size_t d = 0; d < D; d++){ rX[d] /= total_weight; }
         }
 
     }else{ /**  preconditioned forward-Douglas-Rachford  **/
 
         /* compute reduced observation and weights */
         real_t* rY = (real_t*) malloc_check(sizeof(real_t)*D*rV);
-        real_t* reduced_loss_weights = loss == LINEAR ? nullptr :
+        real_t* reduced_loss_weights =
             (real_t*) malloc_check(sizeof(real_t)*rV);
         #pragma omp parallel for schedule(dynamic) NUM_THREADS(V, rV)
         for (comp_t rv = 0; rv < rV; rv++){
             real_t *rYv = rY + rv*D;
             for (size_t d = 0; d < D; d++){ rYv[d] = ZERO; }
-            if (loss != LINEAR){ reduced_loss_weights[rv] = ZERO; }
-            /* run along the component rv */
+            reduced_loss_weights[rv] = ZERO;
             for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
                 index_t v = comp_list[i];
                 const real_t *Yv = Y + v*D;
-                for (size_t d = 0; d < D; d++){ rYv[d] += Yv[d]; }
-                if (loss != LINEAR){
-                    reduced_loss_weights[rv] += LOSS_WEIGHTS_(v);
-                }
-            }
-            if (loss != LINEAR){ 
                 for (size_t d = 0; d < D; d++){
-                    rYv[d] /= reduced_loss_weights[rv];
+                    rYv[d] += LOSS_WEIGHTS_(v)*Yv[d];
                 }
+                reduced_loss_weights[rv] += LOSS_WEIGHTS_(v);
+            }
+            for (size_t d = 0; d < D; d++){
+                rYv[d] /= reduced_loss_weights[rv];
             }
         }
 
@@ -154,8 +162,8 @@ TPL index_t CP_D1_LSX::split()
         size_t vd = v*D;
         size_t rvd = comp_assign[v]*D;
         for (size_t d = 0; d < D; d++){
-            if (loss == LINEAR){ /* linear loss, grad = -Y */
-                grad[vd] = -Y[vd];
+            if (loss == LINEAR){ /* linear loss, grad = - w Y */
+                grad[vd] = -LOSS_WEIGHTS_(v)*Y[vd];
             }else if (loss == QUADRATIC){ /* quadratic loss, grad = w(X - Y) */
                 grad[vd] = LOSS_WEIGHTS_(v)*(rX[rvd] - Y[vd]);
             }else{ /* dKLs/dx_k = -(1-s)(s/D + (1-s)y_k)/(s/D + (1-s)x_k) */
@@ -324,7 +332,7 @@ TPL real_t CP_D1_LSX::compute_evolution(bool compute_dif, comp_t & saturation)
     comp_t num_ops = compute_dif ? V*D : saturation*D;
     real_t dif = ZERO;
     saturation = 0;
-    #pragma omp parallel for NUM_THREADS(num_ops, rV) \
+    #pragma omp parallel for schedule(dynamic) NUM_THREADS(num_ops, rV) \
         reduction(+:dif, saturation)
     for (comp_t rv = 0; rv < rV; rv++){
         real_t* rXv = rX + rv*D;
@@ -360,7 +368,9 @@ TPL real_t CP_D1_LSX::compute_objective()
         for (index_t v = 0; v < V; v++){
             real_t* rXv = rX + comp_assign[v]*D;
             const real_t* Yv = Y + v*D;
-            for (size_t d = 0; d < D; d++){ obj -= rXv[d]*Yv[d]; }
+            real_t prod = ZERO;
+            for (size_t d = 0; d < D; d++){ prod += rXv[d]*Yv[d]; }
+            obj -= LOSS_WEIGHTS_(v)*prod;
         }
     }else if (loss == QUADRATIC){
         #pragma omp parallel for schedule(static) NUM_THREADS(V*D, V) \

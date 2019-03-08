@@ -57,46 +57,49 @@ public:
     void set_loss(real_t loss, const real_t* Y = nullptr,
         const real_t* loss_weights = nullptr);
 
-    /* overload for changing only loss_weights, or the observations Y when the
-     * loss is linear (in which case loss_weights is ignored) */
-    void set_loss(const real_t* loss_weights_or_Y)
-    {
-        if (loss == LINEAR){ set_loss(loss, loss_weights_or_Y); }
-        else{ set_loss(loss, nullptr, loss_weights_or_Y); }
-    }
+    /* overload for changing only loss_weights */
+    void set_loss(const real_t* loss_weights)
+    { set_loss(loss, nullptr, loss_weights); }
 
 private:
     /**  separable loss term  **/
 
     /* observations, D-by-V array, column major format;
-     * for losses other than linear, they are supposed to lie on the simplex */
+     * must lie on the simplex */
     const real_t* Y; 
 
     /* 0 for linear (macro LINEAR)
-     *     f(x) = - <x, y> ,  with  <x, y> = sum_{v,d} x_{v,d} y_{v,d} ;
+     *     f(x) = - <x, y>_w ,
+     * with <x, y>_w = sum_{v,d} w_v y_{v,d} x_{v,d} ;
+     *
      * 1 for quadratic (macro QUADRATIC)
      *     f(x) = 1/2 ||y - x||_{l2,w}^2 ,
      * with  ||y - x||_{l2,w}^2 = sum_{v,d} w_v (y_{v,d} - x_{v,d})^2 ;
-     * 0 < loss < 1 for smoothed Kullback-Leibler divergence
+     *
+     * 0 < loss < 1 for smoothed Kullback-Leibler divergence (cross-entropy)
      *     f(x) = sum_v w_v KLs(x_v, y_v),
-     * with KLs(y_v, x_v) = KL(s u + (1 - s) y_v ,  s u + (1 - s) x_v),
-     * where KL is the regular Kullback-Leibler divergence,
-     *       u is the uniform discrete distribution over {1,...,D}, and
-     *       s = loss is the smoothing parameter ;
-     * It yields, 
-     *     KLs(y_v, x_v) = - sum_k (s/D + (1 - s) y_v) log(s/D + (1 - s) x_v)
-     *                     - H(s u + (1 - s) y_v) ,
-     * where the constant - H(s u + (1 - s) y_v) is equal to
-     *     sum_k (s/D + (1 - s) y_v) log(s/D + (1 - s) y_v)    */
-    real_t loss; 
+     * with KLs(y_v, x_v) = KL(s u + (1 - s) y_v ,  s u + (1 - s) x_v), where
+     *     KL is the regular Kullback-Leibler divergence,
+     *     u is the uniform discrete distribution over {1,...,D}, and
+     *     s = loss is the smoothing parameter ;
+     * it yields
+     *
+     *     KLs(y_v, x_v) = H(s u + (1 - s) y_v)
+     *         - sum_d (s/D + (1 - s) y_{v,d}) log(s/D + (1 - s) x_{v,d}) ,
+     *
+     * where H is the entropy, that is H(s u + (1 - s) y_v)
+     *       = - sum_d (s/D + (1 - s) y_{v,d}) log(s/D + (1 - s) y_{v,d}) ;
+     * note that the choosen order of the arguments in the Kullback--Leibler
+     * does not penalize the entropy of x (H(s u + (1 - s) y_v) is a constant),
+     * hence this loss is actually equivalent to cross-entropy */
+    real_t loss;
 
-    /* weights on vertices for losses other than linear (ignored for linear
-     * loss); array of length V, or null for no weights */
+    /* weights on vertices; array of length V, or null for no weights */
     const real_t *loss_weights;
 
     /**  preconditioning and auxiliary variables  **/
 
-    real_t *KL_Ga_Y; // precompute some information for KL
+    real_t* W_Ga_Y; // precompute some first-order information
 
     /**  specialization of base virtual methods  **/
 

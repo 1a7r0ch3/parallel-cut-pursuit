@@ -180,6 +180,8 @@ private:
 
     void main_iteration() override; // add application of matrix A
 
+    real_t compute_evolution() override; // weight l2 norm by Lipschitz metric
+
     /**  type resolution for base template class members  **/
     using Pfdr_d1<real_t, vertex_t>::V;
     using Pfdr_d1<real_t, vertex_t>::E;
@@ -195,7 +197,11 @@ private:
     using Pfdr<real_t, vertex_t>::ONCE;
     using Pfdr<real_t, vertex_t>::EACH;
     using Pcd_prox<real_t>::X;
+    using Pcd_prox<real_t>::last_X;
     using Pcd_prox<real_t>::cond_min;
+    using Pcd_prox<real_t>::dif_tol;
+    using Pcd_prox<real_t>::dif_rcd;
+    using Pcd_prox<real_t>::iterate_evolution;
     using Pcd_prox<real_t>::eps;
     using Pcd_prox<real_t>::malloc_check;
 };

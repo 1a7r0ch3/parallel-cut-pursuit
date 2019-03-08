@@ -101,10 +101,10 @@ protected:
      * Ga, see gashape), representing a diagonal matrix such that
      * 0 < L and L^(-1/2) grad L^(-1/2) nonexpansive;
      * otherwise 'l' is a Lipschitz constant of the gradient */
-    const real_t *L;
+    const real_t* L;
     real_t l;
     Lipschcomput lipschcomput; // see public declaration 
-    real_t *Lmut; // mutable pointer necessary for computing the Lipschitz metric
+    real_t* Lmut; // nonconst necessary for computing the Lipschitz metric
 
     /**  algorithmic parameters  **/
 

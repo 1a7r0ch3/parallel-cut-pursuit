@@ -132,8 +132,8 @@ TPL void PFDR::compute_weighted_average()
     for (size_t d = 0; d < D; d++){ 
         size_t id = d;
         for (index_t i = 0; i < size; i++){
-            X[id] = Id_W ?
-                (Id_W_(i, id)*(Z_Id ? Z_Id[id] : Ga_grad_f[id] - X[id])) : ZERO;
+            X[id] = !Id_W ? ZERO : 
+                (Id_W_(i, id)*(Z_Id ? Z_Id[id] : Ga_grad_f[id] - X[id]));
             id += D;
         }
         size_t jd = d;
@@ -220,7 +220,9 @@ TPL void PFDR::preconditioning(bool init)
 
     /**  inverse the pseudo-Hessian  **/
     #pragma omp parallel for schedule(static) NUM_THREADS(sizega*Dga)
-    for (size_t id = 0; id < sizega*Dga; id++){ Ga_(id, id) = ONE/Ga_(id, id); }
+    for (size_t id = 0; id < sizega*Dga; id++){
+        Ga_(id, id) = ONE/Ga_(id, id);
+    }
 
     /**  convergence condition on the metric and stability  **/ 
     real_t lga_max = ALMOST_TWO*(TWO - rho);

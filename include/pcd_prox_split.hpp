@@ -93,6 +93,15 @@ protected:
     /**  arrays  **/
     real_t *X, *last_X; // iterate, previous iterate
 
+    /**  monitoring  **/
+
+    /* records the values of the objective functional;
+     * if not NULL, array of length it_max + 1 */
+    real_t* objective_values;
+    /* records the iterate relative evolution;
+     * if not NULL, array of length it_max */
+    real_t* iterate_evolution;
+
     /**  methods  **/
 
     /* compute preconditioning or reconditioning;
@@ -124,15 +133,6 @@ protected:
 private:
 
     const char* name;
-
-    /**  monitoring  **/
-
-    /* records the values of the objective functional;
-     * if not NULL, array of length it_max */
-    real_t* objective_values;
-    /* records the iterate relative evolution;
-     * if not NULL, array of length it_max; */
-    real_t* iterate_evolution;
 
      /**  methods  **/
 

@@ -581,7 +581,7 @@ TPL real_t CP_D1_QL1B::compute_evolution(bool compute_dif, comp_t & saturation)
     comp_t num_ops = compute_dif ? V : saturation;
     real_t dif = ZERO, amp = ZERO;
     saturation = 0;
-    #pragma omp parallel for NUM_THREADS(num_ops, rV) \
+    #pragma omp parallel for schedule(dynamic) NUM_THREADS(num_ops, rV) \
         reduction(+:dif, amp, saturation)
     for (comp_t rv = 0; rv < rV; rv++){  
         real_t rXv = rX[rv];

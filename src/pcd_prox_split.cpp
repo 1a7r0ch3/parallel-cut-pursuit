@@ -9,8 +9,8 @@
 #define PCD_PROX Pcd_prox<real_t>
 
 /* constants of the correct type */
-#define ZERO ((real_t) 0.)
-#define ONE ((real_t) 1.)
+#define ZERO ((real_t) 0.0)
+#define ONE ((real_t) 1.0)
 #define TENTH ((real_t) 0.1)
 
 using namespace std;
