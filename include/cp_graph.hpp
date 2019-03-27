@@ -17,7 +17,7 @@
  *   the capacity will stay negative when maxflow() is computed; in
  *   particular, max flows can be computed independently over each cut-pursuit 
  *   component; beware however that this must be enforced when processing
- *   orphans (see process_*_orphan() in cp_maxflow.cpp)
+ *   orphans (see process_*_orphan() in cp_graph.cpp)
  * - a derived class Cp_graph_parallel is implemented, useful to handle
  *   private copies of a main graph in parallel threads
  *
@@ -51,7 +51,8 @@
 #include "block.hpp"
 
 /* declare cut-pursuit base class for friendship */
-template <typename real_t, typename index_t, typename comp_t> class Cp;
+template <typename real_t, typename index_t, typename comp_t,
+    typename value_t> class Cp;
 
 /* real_t is the real numeric type, used for objective functional computation
  * and thus for edge weights and flow graph capacities;
@@ -59,13 +60,14 @@ template <typename real_t, typename index_t, typename comp_t> class Cp;
  * edges in the main graph;
  * comp_t must be able to represent the number of constant connected components
  * in the reduced graph */
-template <typename real_t, typename index_t, typename comp_t> class Cp_graph
+template <typename real_t, typename index_t, typename comp_t,
+    typename value_t = real_t> class Cp_graph
 {
-    friend class Cp<real_t, index_t, comp_t>;
+    friend class Cp<real_t, index_t, comp_t, value_t>;
 
 public:
 
-    /* used to be a long int; added an overflow check in cp_maxflow.cpp */
+    /* used to be a long int; added an overflow check in cp_graph.cpp */
     typedef index_t timestamp_t; 
 
 	Cp_graph(index_t node_num_max, index_t edge_num_max); // constructor
@@ -187,8 +189,9 @@ private:
     bool is_parallel_copy; // flag a private copy in a parallel thread
 };
 
-#define TPL template <typename real_t, typename index_t, typename comp_t>
-#define CP_GRAPH Cp_graph<real_t, index_t, comp_t>
+#define TPL template <typename real_t, typename index_t, typename comp_t, \
+    typename value_t>
+#define CP_GRAPH Cp_graph<real_t, index_t, comp_t, value_t>
 
 /***  inline methods  ***/
 

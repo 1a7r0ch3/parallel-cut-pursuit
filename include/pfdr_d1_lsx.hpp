@@ -76,7 +76,8 @@ private:
      *     f(x) = 1/2 ||y - x||_{l2,w}^2 ,
      * with  ||y - x||_{l2,w}^2 = sum_{v,d} w_v (y_{v,d} - x_{v,d})^2 ;
      *
-     * 0 < loss < 1 for smoothed Kullback-Leibler divergence (cross-entropy)
+     * 0 < loss < 1 for smoothed (weighted) Kullback-Leibler divergence
+     * (cross-entropy)
      *     f(x) = sum_v w_v KLs(x_v, y_v),
      * with KLs(y_v, x_v) = KL(s u + (1 - s) y_v ,  s u + (1 - s) x_v), where
      *     KL is the regular Kullback-Leibler divergence,
@@ -89,8 +90,8 @@ private:
      *
      * where H is the entropy, that is H(s u + (1 - s) y_v)
      *       = - sum_d (s/D + (1 - s) y_{v,d}) log(s/D + (1 - s) y_{v,d}) ;
-     * note that the choosen order of the arguments in the Kullback--Leibler
-     * does not penalize the entropy of x (H(s u + (1 - s) y_v) is a constant),
+     * note that the choosen order of the arguments in the Kullback-Leibler
+     * does not favor the entropy of x (H(s u + (1 - s) y_v) is a constant),
      * hence this loss is actually equivalent to cross-entropy */
     real_t loss;
 

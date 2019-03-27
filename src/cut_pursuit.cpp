@@ -13,16 +13,18 @@
 #define NOT_ASSIGNED MAX_NUM_COMP
 #define ASSIGNED ((comp_t) 1)
 #define ASSIGNED_ROOT ((comp_t) 2)
+/* maximum number of edges; no edge can have this identifier */
 #define NO_EDGE (std::numeric_limits<index_t>::max())
 
-#define TPL template <typename real_t, typename index_t, typename comp_t>
-#define CP Cp<real_t, index_t, comp_t>
+#define TPL template <typename real_t, typename index_t, typename comp_t, \
+    typename value_t>
+#define CP Cp<real_t, index_t, comp_t, value_t>
 
 using namespace std; 
 
-TPL CP::Cp(index_t V, index_t E,
-    const index_t* first_edge, const index_t* adj_vertices)
-    : V(V), E(E), first_edge(first_edge), adj_vertices(adj_vertices)
+TPL CP::Cp(index_t V, index_t E, const index_t* first_edge,
+    const index_t* adj_vertices, size_t D)
+    : V(V), E(E), first_edge(first_edge), adj_vertices(adj_vertices), D(D)
 {
     /* construct graph */
     G = new Cp_graph<real_t, index_t, comp_t>(V, E);
@@ -44,6 +46,7 @@ TPL CP::Cp(index_t V, index_t E,
     reduced_edges = nullptr;
     elapsed_time = nullptr;
     objective_values = iterate_evolution = nullptr;
+    rX = last_rX = nullptr;
     
     it_max = 10; verbose = 1000;
     dif_tol = ZERO;
@@ -56,6 +59,7 @@ TPL CP::~Cp()
     delete G;
     free(comp_assign); free(comp_list); free(first_vertex);
     free(reduced_edges); free(reduced_edge_weights);
+    free(rX); free(last_rX); 
 }
 
 TPL void CP::reset_active_edges()
@@ -117,6 +121,10 @@ TPL size_t CP::get_reduced_graph(comp_t** reduced_edges,
     return this->rE;
 }
 
+TPL value_t* CP::get_reduced_values(){ return rX; }
+
+TPL void CP::set_reduced_values(value_t* rX){ this->rX = rX; }
+
 TPL int CP::cut_pursuit(bool init)
 {
     int it = 0;
@@ -131,7 +139,7 @@ TPL int CP::cut_pursuit(bool init)
         initialize();
         if (objective_values){ objective_values[0] = compute_objective(); }
     }
-    
+
     while (true){
         if (elapsed_time){ elapsed_time[it] = timer = monitor_time(start); }
         if (verbose){ print_progress(it, dif, saturation, timer); }
@@ -144,6 +152,7 @@ TPL int CP::cut_pursuit(bool init)
         }
 
         if (!activation){ /* do not recompute reduced problem */
+            saturation = rV;
             if (dif_tol > ZERO || iterate_evolution){
                 dif = ZERO;
                 if (iterate_evolution){ iterate_evolution[it] = dif; }
@@ -158,13 +167,14 @@ TPL int CP::cut_pursuit(bool init)
         }else{ /* reduced graph and components will be updated */
             if (monitor_evolution){
                 /* store last iterate values */
-                copy_last_comp_values();
+                last_rX = (real_t*) malloc_check(sizeof(real_t)*D*rV);
+                for (size_t i = 0; i < D*rV; i++){ last_rX[i] = rX[i]; }
                 /* store previous assignment */
                 for (index_t v = 0; v < V; v++){
                     set_tmp_comp_assign(v, comp_assign[v]);
                 }
             }
-            free_comp_values();
+            free(rX); rX = nullptr;
             free(reduced_edges); reduced_edges = nullptr;
             free(reduced_edge_weights); reduced_edge_weights = nullptr;
         }
@@ -185,19 +195,20 @@ TPL int CP::cut_pursuit(bool init)
 
         if (verbose){ cout << "\tMerge... " << flush; }
         index_t deactivation = merge();
-        if (verbose){ cout << deactivation << " deactivated edges." << endl; }
+        if (verbose){
+            cout << deactivation << " deactivated edge(s)." << endl;
+        }
 
         if (monitor_evolution){
             dif = compute_evolution(dif_tol > ZERO || iterate_evolution,
                 saturation);
             if (iterate_evolution){ iterate_evolution[it] = dif; }
-            free_last_comp_values();
+            free(last_rX); last_rX = nullptr;
         }
 
         it++;
 
         if (objective_values){ objective_values[it] = compute_objective(); }
-
     } /* endwhile true */
 
     return it;
@@ -399,10 +410,10 @@ TPL comp_t CP::compute_connected_components()
     free(first_vertex);
     first_vertex = (index_t*) malloc_check(sizeof(index_t)*rVp1);
     comp_t rv = (comp_t) -1;
-    for (index_t v = 0; v < V; v++){
-        index_t u = comp_list[v] = get_tmp_comp_list(v);
-        if (comp_assign[u] == ASSIGNED_ROOT){ first_vertex[++rv] = v; }
-        comp_assign[u] = rv;
+    for (index_t i = 0; i < V; i++){
+        index_t v = comp_list[i] = get_tmp_comp_list(i);
+        if (comp_assign[v] == ASSIGNED_ROOT){ first_vertex[++rv] = i; }
+        comp_assign[v] = rv;
     }
     first_vertex[rV] = V;
 
@@ -415,7 +426,10 @@ TPL void CP::compute_reduced_graph()
     free(reduced_edges);
     free(reduced_edge_weights);
 
-    if (rV == 1){ /* reduced graph only edge from the component to itself */
+    if (rV == 1){ /* reduced graph only edge from the component to itself
+                   * this is only useful for solving reduced problems with
+                   * certain implementations where isolated vertices must be
+                   * linked to themselves */
         rE = 1;
         reduced_edges = (comp_t*) malloc_check(sizeof(comp_t)*2);
         reduced_edges[0] = reduced_edges[1] = 0;
@@ -438,7 +452,7 @@ TPL void CP::compute_reduced_graph()
     rE = 0; // current number of reduced edges
     size_t last_rE = 0; // keep track of number of processed edges
     for (comp_t ru = 0; ru < rV; ru++){ /* iterate over the components */
-        bool isolated = true; // flag isolated components (useful for PFDR)
+        bool isolated = true; // flag isolated components
         /* run along the component ru */
         for (index_t i = first_vertex[ru]; i < first_vertex[ru + 1]; i++){
             index_t u = comp_list[i];
@@ -469,8 +483,8 @@ TPL void CP::compute_reduced_graph()
             }
         }
         if (isolated){ /* this is only useful for solving reduced problems
-        * with certain implementation of PFDR where isolated vertices must be
-        * linked to themselves */
+        * with certain implementations where isolated vertices must be linked
+        * to themselves */
             if (rE == rEtmp){ // reach buffer size
                 rEtmp += rEtmp;
                 reduced_edges = (comp_t*) realloc_check(reduced_edges,
@@ -535,6 +549,9 @@ TPL void CP::merge_components(comp_t& ru, comp_t& rv)
 
 TPL index_t CP::merge()
 {
+    /* if (rE == 0){ return 0; } currently, isolated compoents are linked
+     * to themselve in the reduced graph, thus rE is at least one */
+    
     /* create the chains representing the merged components */
     merge_chains_root = (comp_t*) malloc_check(sizeof(comp_t)*rV); 
     merge_chains_next = (comp_t*) malloc_check(sizeof(comp_t)*rV);
@@ -545,7 +562,12 @@ TPL index_t CP::merge()
         merge_chains_leaf[rv] = rv;
     }
     comp_t merge_count = compute_merge_chains();
-    if (!merge_count){ return 0; }
+    if (!merge_count){
+        free(merge_chains_root);
+        free(merge_chains_next);
+        free(merge_chains_leaf);
+        return 0;
+    }
 
     /* construct a new version of 'comp_list' in temporary storage and update
      * 'rX', 'first_vertex', and 'reduced_edges' and '_weights' in-place */
@@ -555,7 +577,9 @@ TPL index_t CP::merge()
     for (comp_t ru = 0; ru < rV; ru++){
         if (merge_chains_root[ru] != CHAIN_ROOT){ continue; }
         /* otherwise ru is a root, create the corresponding new component */
-        copy_component_value(ru, rn); // rn <= ru, rX can be modified in-place 
+        const value_t* rXu = rX + D*ru;
+        value_t* rXn = rX + D*rn;
+        for (size_t d = 0; d < D; d++){ rXn[d] = rXu[d]; }
         comp_t rv = ru; 
         index_t first = i; // holds index of first vertex of the component
         while (rv != CHAIN_LEAF){
@@ -575,7 +599,7 @@ TPL index_t CP::merge()
     first_vertex[rV = rn] = V;
     first_vertex = (index_t*) realloc_check(first_vertex,
         sizeof(index_t)*rVp1);
-    resize_comp_values();
+    rX = (real_t*) realloc_check(rX, sizeof(real_t)*D*rV);
     for (index_t v = 0; v < V; v++){ /* update components assignments */
         comp_list[v] = get_tmp_comp_list(v);
         comp_assign[v] = new_comp_id[comp_assign[v]];
@@ -584,7 +608,7 @@ TPL index_t CP::merge()
     /* update corresponding reduced edges;
      * some edges will appear several times in the list, important thing is
      * that the corresponding weights sum up to the right quantity;
-     * note that rE will be an upper bound of the actual number of edges */
+     * note that rE is thus an upper bound of the actual number of edges */
     size_t new_re = 0;
     for (size_t re = 0; re < rE; re++){
         comp_t new_ru = new_comp_id[reduced_edges[2*re]];

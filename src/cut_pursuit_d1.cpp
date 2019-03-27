@@ -16,14 +16,8 @@ using namespace std;
 
 TPL CP_D1::Cp_d1(index_t V, index_t E, const index_t* first_edge,
     const index_t* adj_vertices, size_t D, D1p d1p)
-    : Cp<real_t, index_t, comp_t>(V, E, first_edge, adj_vertices), D(D),
-    d1p(d1p)
-{
-    rX = last_rX = nullptr;
-    coor_weights = nullptr;
-}
-
-TPL CP_D1::~Cp_d1(){ free(rX); free(last_rX); }
+    : Cp<real_t, index_t, comp_t>(V, E, first_edge, adj_vertices, D), d1p(d1p)
+{ coor_weights = nullptr; }
 
 TPL void CP_D1::set_edge_weights(const real_t* edge_weights,
     real_t homo_edge_weight, const real_t* coor_weights)
@@ -32,23 +26,6 @@ TPL void CP_D1::set_edge_weights(const real_t* edge_weights,
         homo_edge_weight);
     this->coor_weights = coor_weights;
 }
-
-TPL real_t* CP_D1::get_reduced_values(){ return rX; }
-
-TPL void CP_D1::set_reduced_values(real_t* rX){ this->rX = rX; }
-
-TPL void CP_D1::free_comp_values(){ free(rX); rX = nullptr; }
-
-TPL void CP_D1::copy_last_comp_values()
-{
-    last_rX = (real_t*) malloc_check(sizeof(real_t)*D*rV);
-    for (size_t i = 0; i < D*rV; i++){ last_rX[i] = rX[i]; }
-}
-
-TPL void CP_D1::free_last_comp_values(){ free(last_rX); last_rX = nullptr; }
-
-TPL void CP_D1::resize_comp_values()
-{ rX = (real_t*) realloc_check(rX, sizeof(real_t)*D*rV); }
 
 TPL bool CP_D1::is_almost_equal(comp_t ru, comp_t rv)
 {

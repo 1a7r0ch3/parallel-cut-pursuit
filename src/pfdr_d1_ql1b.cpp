@@ -340,16 +340,16 @@ TPL void PFDR_D1_QL1B::main_iteration()
 TPL real_t PFDR_D1_QL1B::compute_evolution()
 {
     real_t dif = ZERO;
-    real_t norm = ZERO;
+    real_t amp = ZERO;
     #pragma omp parallel for schedule(static) NUM_THREADS(V) \
-        reduction(+:dif, norm)
+        reduction(+:dif, amp)
     for (vertex_t v = 0; v < V; v++){
         real_t d = last_X[v] - X[v];
         dif += lshape == MONODIM ? L[v]*d*d : d*d;
-        norm += lshape == MONODIM ? L[v]*X[v]*X[v] : X[v]*X[v];
+        amp += lshape == MONODIM ? L[v]*X[v]*X[v] : X[v]*X[v];
         last_X[v] = X[v];
     }
-    return sqrt(norm) > eps ? sqrt(dif/norm) : sqrt(dif)/eps;
+    return sqrt(amp) > eps ? sqrt(dif/amp) : sqrt(dif)/eps;
 }
 
 /**  instantiate for compilation  **/

@@ -39,26 +39,13 @@ public:
      * and reduced problem elements, etc.), but this can be prevented by
      * getting the corresponding pointer member and setting it to null
      * beforehand */
-	virtual ~Cp_d1();
 
     /* overload allowing for different weights along coordinates;
      * if 'edge_weights' is null, homogeneously equal to 'homo_edge_weight' */
     void set_edge_weights(const real_t* edge_weights = nullptr,
         real_t homo_edge_weight = 1.0, const real_t* coor_weights = nullptr);
 
-    /* retrieve the reduced iterate (values of the components);
-     * WARNING: reduced values are free()'d by destructor */
-    real_t* get_reduced_values();
-
-    /* set the reduced iterate (values of the components);
-     * WARNING: this will be deleted by free() so the given pointer must have
-     * been allocated with malloc() and the likes */
-    void set_reduced_values(real_t* rX);
-
 protected:
-    const size_t D; // dimension of the data; total size is V*D
-    real_t *rX, *last_rX; // reduced iterate (values of the components)
-
     /* for multidimensional data, weights the coordinates in the lp norms;
      * all weights must be strictly positive, and it is advised to normalize
      * the weights so that the first value is unity */
@@ -68,10 +55,13 @@ protected:
     real_t compute_graph_d1();
 
     /**  type resolution for base template class members  **/
+    using Cp<real_t, index_t, comp_t>::rX;
+    using Cp<real_t, index_t, comp_t>::last_rX;
     using Cp<real_t, index_t, comp_t>::eps;
     using Cp<real_t, index_t, comp_t>::dif_tol;
     using Cp<real_t, index_t, comp_t>::V;
     using Cp<real_t, index_t, comp_t>::E;
+    using Cp<real_t, index_t, comp_t>::D;
     using Cp<real_t, index_t, comp_t>::first_edge;
     using Cp<real_t, index_t, comp_t>::adj_vertices; 
     using Cp<real_t, index_t, comp_t>::rV;
@@ -83,12 +73,6 @@ protected:
     using Cp<real_t, index_t, comp_t>::realloc_check;
 
 private:
-    void free_comp_values() override;
-    void copy_last_comp_values() override;
-    void free_last_comp_values() override;
-    void copy_component_value(comp_t src, comp_t dst) override;
-    void resize_comp_values() override;
-
     const D1p d1p; // see public enum declaration
 
     /* test if two components are sufficiently close to merge */
@@ -101,12 +85,3 @@ private:
     using Cp<real_t, index_t, comp_t>::merge_components;
     using Cp<real_t, index_t, comp_t>::get_merge_chain_root;
 };
-
-template <typename real_t, typename index_t, typename comp_t> 
-inline void Cp_d1<real_t, index_t, comp_t>::copy_component_value(comp_t src,
-    comp_t dst)
-{
-    const real_t* rXsrc = rX + D*src;
-    real_t* rXdst = rX + D*dst;
-    for (size_t d = 0; d < D; d++){ rXdst[d] = rXsrc[d]; }
-}

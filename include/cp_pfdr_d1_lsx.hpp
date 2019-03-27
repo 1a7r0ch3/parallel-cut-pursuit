@@ -22,7 +22,7 @@
  * Nonsmooth Functionals with Graph Total Variation, International Conference
  * on Machine Learning, PMLR, 2018, 80, 4244-4253
  *
- * H. Raguet, A Note on the Forward-Douglas--Rachford Splitting for Monotone 
+ * H. Raguet, A Note on the Forward-Douglas-Rachford Splitting for Monotone 
  * Inclusion and Convex Optimization, Optimization Letters, 2018, 1-24
  *
  * Hugo Raguet 2018
@@ -66,7 +66,7 @@ public:
     void set_loss(real_t loss, const real_t* Y = nullptr,
         const real_t* loss_weights = nullptr);
 
-    /* overload for changing only loss_weights */
+    /* overload for changing only loss weights */
     void set_loss(const real_t* loss_weights)
     { set_loss(loss, nullptr, loss_weights); }
 
@@ -91,9 +91,10 @@ private:
      *
      * 1 for quadratic (macro QUADRATIC)
      *     f(x) = 1/2 ||y - x||_{l2,w}^2 ,
-     * with  ||y - x||_{l2,w}^2 = sum_{v,d} w_v (y_{v,d} - x_{v,d})^2 ;
+     * with ||y - x||_{l2,w}^2 = sum_{v,d} w_v (y_{v,d} - x_{v,d})^2 ;
      *
-     * 0 < loss < 1 for smoothed Kullback-Leibler divergence (cross-entropy)
+     * 0 < loss < 1 for smoothed (weighted) Kullback-Leibler divergence
+     * (cross-entropy)
      *     f(x) = sum_v w_v KLs(x_v, y_v),
      * with KLs(y_v, x_v) = KL(s u + (1 - s) y_v ,  s u + (1 - s) x_v), where
      *     KL is the regular Kullback-Leibler divergence,
@@ -101,13 +102,13 @@ private:
      *     s = loss is the smoothing parameter ;
      * it yields
      *
-     *     KLs(y_v, x_v) = H(s u + (1 - s) y_v)
+     *     KLs(y_v, x_v) = - H(s u + (1 - s) y_v)
      *         - sum_d (s/D + (1 - s) y_{v,d}) log(s/D + (1 - s) x_{v,d}) ,
      *
      * where H is the entropy, that is H(s u + (1 - s) y_v)
      *       = - sum_d (s/D + (1 - s) y_{v,d}) log(s/D + (1 - s) y_{v,d}) ;
-     * note that the choosen order of the arguments in the Kullback--Leibler
-     * does not penalize the entropy of x (H(s u + (1 - s) y_v) is a constant),
+     * note that the choosen order of the arguments in the Kullback-Leibler
+     * does not favor the entropy of x (H(s u + (1 - s) y_v) is a constant),
      * hence this loss is actually equivalent to cross-entropy */
     real_t loss;
 
@@ -139,11 +140,11 @@ private:
     using Cp_d1<real_t, index_t, comp_t>::coor_weights;
     using Cp_d1<real_t, index_t, comp_t>::compute_graph_d1;
     using Cp<real_t, index_t, comp_t>::monitor_evolution;
-    using Cp<real_t, index_t, comp_t>::set_saturation;
-    using Cp<real_t, index_t, comp_t>::is_saturated;
-    using Cp<real_t, index_t, comp_t>::is_sink;
     using Cp<real_t, index_t, comp_t>::is_active;
     using Cp<real_t, index_t, comp_t>::set_active;
+    using Cp<real_t, index_t, comp_t>::is_sink;
+    using Cp<real_t, index_t, comp_t>::is_saturated;
+    using Cp<real_t, index_t, comp_t>::set_saturation;
     using Cp<real_t, index_t, comp_t>::set_edge_capacities;
     using Cp<real_t, index_t, comp_t>::set_term_capacities;
     using Cp<real_t, index_t, comp_t>::add_term_capacities;

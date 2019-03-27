@@ -6,14 +6,14 @@
 % Machine Learning, PMLR, 2018, 80, 4244-4253
 %
 % Hugo Raguet 2017, 2018
-cd(fileparts(which('example_point_cloud.m')));
+cd(fileparts(which('example_labeling_3D.m')));
 addpath(genpath('./bin/'));
 
 %%%  classes involved in the task  %%%
 classNames = {'road', 'vegetation', 'facade', 'hardscape', 'scanning artifacts', 'cars'};
 classId = uint8(1:6)';
 
-%%%  parameters; see octave/doc/CP_PFDR_graph_d1_l1  %%%
+%%%  parameters; see octave/doc/cp_pfdr_d1_lsx_mex.m  %%%
 CP_difTol = 1e-3;
 CP_itMax = 10;
 PFDR_rho = 1.5;

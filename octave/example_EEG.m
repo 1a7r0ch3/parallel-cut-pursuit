@@ -18,7 +18,7 @@ printResults = false; % requires color encapsulated postscript driver on your
 numberOfColors = 256;
 darkLevel = 1/16;
 
-%%%  parameters; see octave/doc/CP_PFDR_graph_d1_l1  %%%
+%%%  parameters; see octave/doc/cp_pfdr_d1_ql1b_mex.m %%%
 CP_difTol = 1e-4;
 CP_itMax = 15;
 PFDR_rho = 1.5;

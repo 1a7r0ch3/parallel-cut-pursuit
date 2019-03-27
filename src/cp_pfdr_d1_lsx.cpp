@@ -155,7 +155,7 @@ TPL index_t CP_D1_LSX::split()
     real_t* grad = (real_t*) malloc_check(sizeof(real_t)*D*V);
 
     /**  gradient of differentiable part  **/ 
-    real_t c = (ONE - loss), q = loss/D, r = q/c; // useful for KLs
+    const real_t c = (ONE - loss), q = loss/D, r = q/c; // useful for KLs
     #pragma omp parallel for schedule(static) NUM_THREADS(V*D + 2*E*D, V)
     for (index_t v = 0; v < V; v++){
         /* loss term */
@@ -199,7 +199,7 @@ TPL index_t CP_D1_LSX::split()
      * searched with one alpha-expansion cycle  **/
 
     /* best ascent coordinates stored temporarily in array 'comp_assign' */
-    comp_t* pref_d = comp_assign;
+    comp_t* best_d = comp_assign;
 
     /**  set capacities and compute min cuts in parallel along components  **/
     #pragma omp parallel NUM_THREADS((D - 1)*(2*V + 5*E), rV)
@@ -220,10 +220,10 @@ TPL index_t CP_D1_LSX::split()
             if (rXv[d] > max){ max = rXv[dmv = d]; }
         }
 
-        /* initialize prefered ascent coordinate at the coordinate with maximum
+        /* initialize best ascent coordinate at the coordinate with maximum
          * value, corresponding to a null descent direction (1dmv - 1dmv) */
         for (index_t v = first_vertex[rv]; v < first_vertex[rv + 1]; v++){
-            pref_d[comp_list[v]] = dmv;
+            best_d[comp_list[v]] = dmv;
         }
 
         /* iterate over all D - 1 alternative ascent coordinates */
@@ -237,7 +237,7 @@ TPL index_t CP_D1_LSX::split()
                 index_t v = comp_list[i];
                 real_t* gradv = grad + v*D;
                 /* unary cost for changing current dir_v to 1d - 1dmv */
-                set_term_capacities(v, gradv[d] - gradv[pref_d[v]]);
+                set_term_capacities(v, gradv[d] - gradv[best_d[v]]);
             }
 
             /* set d1 edge capacities within each component;
@@ -268,8 +268,8 @@ TPL index_t CP_D1_LSX::split()
                      *            constant +      unary terms     + binary term
                      */
                     /* current ascent coordinate */
-                    comp_t du = pref_d[u];
-                    comp_t dv = pref_d[v];
+                    comp_t du = best_d[u];
+                    comp_t dv = best_d[v];
                     /* A = E(0,0) is the cost of the current ascent coords */
                     real_t A = du == dv ? ZERO : EDGE_WEIGHTS_(e)
                         *(COOR_WEIGHTS_(du) + COOR_WEIGHTS_(dv));
@@ -287,13 +287,13 @@ TPL index_t CP_D1_LSX::split()
                 }
             }
 
-            /* find min cut and update prefered ascent coordinates accordingly */
+            /* find min cut and update best ascent coordinates accordingly */
             Gpar->maxflow(first_vertex[rv + 1] - first_vertex[rv],
                 comp_list + first_vertex[rv]);
             
             for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
                 index_t v = comp_list[i];
-                if (is_sink(v)){ pref_d[v] = d; }
+                if (is_sink(v)){ best_d[v] = d; }
             }
 
         } // end for d_alt
@@ -302,7 +302,7 @@ TPL index_t CP_D1_LSX::split()
         for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
             index_t v = comp_list[i];
             for (index_t e = first_edge[v]; e < first_edge[v + 1]; e++){
-                if (!is_active(e) && pref_d[v] != pref_d[adj_vertices[e]]){
+                if (!is_active(e) && best_d[v] != best_d[adj_vertices[e]]){
                     set_active(e);
                     rv_activation++;
                 }
@@ -386,8 +386,8 @@ TPL real_t CP_D1_LSX::compute_objective()
         }
         obj *= HALF;
     }else{ /* smoothed Kullback-Leibler */
-        real_t c = (ONE - loss);
-        real_t q = loss/D;
+        const real_t c = (ONE - loss);
+        const real_t q = loss/D;
         #pragma omp parallel for schedule(static) NUM_THREADS(V*D, V) \
             reduction(+:obj) 
         for (index_t v = 0; v < V; v++){

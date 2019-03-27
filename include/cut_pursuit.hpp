@@ -45,15 +45,20 @@
  * index_t must be able to represent the number of vertices and of (undirected)
  * edges in the main graph;
  * comp_t must be able to represent the number of constant connected components
- * in the reduced graph */
-template <typename real_t, typename index_t, typename comp_t> class Cp
+ * in the reduced graph;
+ * value_t is the type associated to the space to which the values belong, it
+ * is usually real_t, and if multidimensional, this must be specified in the
+ * parameter D (e.g. for R^3, specify value_t = real_t and D = 3) */
+template <typename real_t, typename index_t, typename comp_t,
+    typename value_t = real_t>
+class Cp
 {
 public:
     /**  constructor, destructor  **/
 
     /* only creates flow graph structure */
     Cp(index_t V, index_t E, const index_t* first_edge, 
-        const index_t* adj_vertices);
+        const index_t* adj_vertices, size_t D = 1);
 
     /* the destructor does not free pointers which are supposed to be provided 
      * by the user (forward-star graph structure given at construction, 
@@ -101,11 +106,22 @@ public:
     size_t get_reduced_graph(comp_t** reduced_edges = nullptr,
         real_t** reduced_edge_weights = nullptr);
 
-    /**  solve the main problem  **/
+    /* retrieve the reduced iterate (values of the components);
+     * WARNING: reduced values are free()'d by destructor */
+    value_t* get_reduced_values();
 
+    /* set the reduced iterate (values of the components);
+     * WARNING: if not set to null before deletion of the main cp object,
+     * this will be deleted by free() so the given pointer must have been
+     * allocated with malloc() and the likes */
+    void set_reduced_values(value_t* rX);
+
+    /* solve the main problem */
     int cut_pursuit(bool init = true);
 
 protected:
+    const size_t D; // dimension of the data; total size is V*D
+    value_t *rX, *last_rX; // reduced iterate (values of the components)
 
     /**  main graph  **/
 
@@ -138,7 +154,10 @@ protected:
     /** parameters **/
 
     real_t dif_tol, eps; // eps gives a characteristic precision 
-    int it_max, verbose;
+    /* with nonzero verbose information on the process will be printed;
+     * for convex methods, this will be passed on to the reduced problem
+     * subroutine, controlling the number of subiterations between prints */
+    int it_max, verbose; 
 
     /* for stopping criterion or component saturation in convex problems */
     bool monitor_evolution;
@@ -146,6 +165,10 @@ protected:
     /**  methods for manipulating nodes and arcs in the flow graph  **/
 
     bool is_active(index_t e); // check if edge e is active
+
+    void set_active(index_t e); // flag an active edge
+
+    void set_inactive(index_t e); // flag an inactive edge
 
     bool is_sink(index_t v); // check if vertex v is in the sink after min cut
 
@@ -158,11 +181,11 @@ protected:
 
     index_t get_tmp_comp_list(index_t v);
 
+    bool is_saturated(comp_t rv); // check component's saturation
+
     /* NOTA: saturation is flagged on the first vertex of the component, so
      * this must be reset if the component list is modified or reordered */
     void set_saturation(comp_t rv, bool saturation);
-
-    bool is_saturated(comp_t rv);
 
     /* manipulate flow graph residual capacities */
     void set_edge_capacities(index_t e, real_t cap_uv, real_t cap_vu);
@@ -170,11 +193,6 @@ protected:
     void set_term_capacities(index_t v, real_t cap);
 
     void add_term_capacities(index_t v, real_t cap);
-
-    /* flag an active/inactive edges */
-    void set_active(index_t e);
-
-    void set_inactive(index_t e);
 
     /**  methods for cut-pursuit steps  **/
 
@@ -201,15 +219,13 @@ protected:
      * - rv is the leaf of its chain if, and only if next[rv] = CHAIN_LEAF;
      * an additional requirement is that the root of each chain should be the
      * component in the chain with lowest index */
-    comp_t *merge_chains_root, *merge_chains_next, *merge_chains_leaf;
-
     comp_t get_merge_chain_root(comp_t rv);
 
     /* merge the merge chains of the two given roots;
      * the root of the resulting chain will be the component in the chains
      * with lowest index, and assigned to the parameter ru; the root of the
      * other chain in the merge is assigned to rv */
-    virtual void merge_components(comp_t& ru, comp_t& rv);
+    void merge_components(comp_t& ru, comp_t& rv);
 
     /* compute the merge chains and return the number of effective merges;
      * NOTA: the chosen reduced graph structure is just a list of edges,
@@ -218,19 +234,10 @@ protected:
      * O(rE^2), but is expected to be much less in practice */
     virtual comp_t compute_merge_chains() = 0;
 
-    /* copy the value of the component 'src' in the value 'dst' */
-    virtual void copy_component_value(comp_t src, comp_t dst) = 0;
-
     /* main routine using the above to perform the merge step */
-    index_t merge();
+    virtual index_t merge();
 
     /**  monitoring evolution; set monitor_evolution to true  **/
-
-    /* memory management of component values */
-    virtual void free_comp_values() = 0;
-    virtual void copy_last_comp_values() = 0;
-    virtual void free_last_comp_values() = 0;
-    virtual void resize_comp_values() = 0;
 
     /* compute relative iterate evolution;
      * for convex problems, components saturation should be checked here */
@@ -240,7 +247,7 @@ protected:
     virtual real_t compute_objective() = 0;
 
     /* allocate memory and fail with error message if not successful */
-    void* malloc_check(size_t size){
+    static void* malloc_check(size_t size){
         void *ptr = malloc(size);
         if (!ptr){
             std::cerr << "Cut-pursuit: not enough memory." << std::endl;
@@ -249,7 +256,7 @@ protected:
         return ptr;
     }
 
-    void* realloc_check(void* ptr, size_t size){
+    static void* realloc_check(void* ptr, size_t size){
         ptr = realloc(ptr, size);
         if (!ptr){
             std::cerr << "Cut-pursuit: not enough memory." << std::endl;
@@ -294,10 +301,14 @@ private:
 
     /* allocate and compute reduced graph structure */
     void compute_reduced_graph();
+
+    /* during the merging step, merged components are stored as chains */
+    comp_t *merge_chains_root, *merge_chains_next, *merge_chains_leaf;
 };
 
-#define TPL template <typename real_t, typename index_t, typename comp_t>
-#define CP Cp<real_t, index_t, comp_t>
+#define TPL template <typename real_t, typename index_t, typename comp_t, \
+    typename value_t>
+#define CP Cp<real_t, index_t, comp_t, value_t>
 
 /***  inline methods in relation with main graph  ***/
 

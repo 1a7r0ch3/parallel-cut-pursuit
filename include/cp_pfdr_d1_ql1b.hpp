@@ -172,11 +172,11 @@ private:
     using Cp_d1<real_t, index_t, comp_t>::rX;
     using Cp_d1<real_t, index_t, comp_t>::last_rX;
     using Cp<real_t, index_t, comp_t>::monitor_evolution;
-    using Cp<real_t, index_t, comp_t>::set_saturation;
-    using Cp<real_t, index_t, comp_t>::is_saturated;
-    using Cp<real_t, index_t, comp_t>::is_sink;
     using Cp<real_t, index_t, comp_t>::is_active;
     using Cp<real_t, index_t, comp_t>::set_active;
+    using Cp<real_t, index_t, comp_t>::is_sink;
+    using Cp<real_t, index_t, comp_t>::is_saturated;
+    using Cp<real_t, index_t, comp_t>::set_saturation;
     using Cp<real_t, index_t, comp_t>::set_edge_capacities;
     using Cp<real_t, index_t, comp_t>::set_term_capacities;
     using Cp<real_t, index_t, comp_t>::add_term_capacities;

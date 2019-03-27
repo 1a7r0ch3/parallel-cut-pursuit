@@ -54,10 +54,14 @@ static mxArray* resize_and_create_mxRow(type_t* buffer, size_t size,
     mxClassID id)
 {
     mxArray* row = mxCreateNumericMatrix(0, 0, id, mxREAL);
-    mxSetM(row, 1);
-    mxSetN(row, size);
-    buffer = (type_t*) mxRealloc((void*) buffer, sizeof(type_t)*size);
-    mxSetData(row, (void*) buffer);
+    if (size){
+        mxSetM(row, 1);
+        mxSetN(row, size);
+        buffer = (type_t*) mxRealloc((void*) buffer, sizeof(type_t)*size);
+        mxSetData(row, (void*) buffer);
+    }else{
+        mxFree((void*) buffer);
+    }
     return row;
 }
 
@@ -75,11 +79,6 @@ static void cp_pfdr_d1_lsx_mex(int nlhs, mxArray **plhs, int nrhs, \
     const real_t *Y = (real_t*) mxGetData(prhs[1]);
     const real_t *loss_weights = (nrhs > 5 && !mxIsEmpty(prhs[5])) ?
         (real_t*) mxGetData(prhs[5]) : nullptr;
-    if (loss == LINEAR && loss_weights){
-        mexErrMsgIdAndTxt("MEX", "Cut-pursuit d1 loss simplex: with linear "
-            "loss, weights should be directly incorporated in the "
-            "observations and argument 6 'loss_weights' should be left empty");
-    }
 
     /* graph structure */
     index_t E = mxGetNumberOfElements(prhs[3]);
@@ -113,7 +112,7 @@ static void cp_pfdr_d1_lsx_mex(int nlhs, mxArray **plhs, int nrhs, \
 
     /**  prepare output; rX (plhs[1]) is created later  **/
 
-    plhs[0] = mxCreateNumericMatrix(V, 1, COMP_CLASS, mxREAL);
+    plhs[0] = mxCreateNumericMatrix(1, V, COMP_CLASS, mxREAL);
     comp_t *Comp = (comp_t*) mxGetData(plhs[0]);
     plhs[2] = mxCreateNumericMatrix(1, 1, VERTEX_CLASS, mxREAL);
     int *it = (int*) mxGetData(plhs[2]);

@@ -55,10 +55,14 @@ static mxArray* resize_and_create_mxRow(type_t* buffer, size_t size,
     mxClassID id)
 {
     mxArray* row = mxCreateNumericMatrix(0, 0, id, mxREAL);
-    mxSetM(row, 1);
-    mxSetN(row, size);
-    buffer = (type_t*) mxRealloc((void*) buffer, sizeof(type_t)*size);
-    mxSetData(row, (void*) buffer);
+    if (size){
+        mxSetM(row, 1);
+        mxSetN(row, size);
+        buffer = (type_t*) mxRealloc((void*) buffer, sizeof(type_t)*size);
+        mxSetData(row, (void*) buffer);
+    }else{
+        mxFree((void*) buffer);
+    }
     return row;
 }
 
@@ -94,7 +98,7 @@ static void cp_pfdr_d1_ql1b_mex(int nlhs, mxArray **plhs, int nrhs, \
             V = N;
         }
         N = DIAG_ATA;
-    }else if (V == N && (nrhs < 17 || mxIsLogicalScalarTrue(prhs[16]))){
+    }else if (V == N && (nrhs < 18 || mxIsLogicalScalarTrue(prhs[17]))){
         N = FULL_ATA; // A and Y are left-premultiplied by A^t
     }
 
@@ -153,7 +157,7 @@ static void cp_pfdr_d1_ql1b_mex(int nlhs, mxArray **plhs, int nrhs, \
 
     /**  prepare output; rX (plhs[1]) is created later  **/
 
-    plhs[0] = mxCreateNumericMatrix(V, 1, COMP_CLASS, mxREAL);
+    plhs[0] = mxCreateNumericMatrix(1, V, COMP_CLASS, mxREAL);
     comp_t *Comp = (comp_t*) mxGetData(plhs[0]);
     plhs[2] = mxCreateNumericMatrix(1, 1, mxINT32_CLASS, mxREAL);
     int *it = (int*) mxGetData(plhs[2]);
