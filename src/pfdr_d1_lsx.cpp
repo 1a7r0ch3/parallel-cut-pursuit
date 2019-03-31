@@ -10,7 +10,6 @@
 #define ZERO ((real_t) 0.0)
 #define ONE ((real_t) 1.0)
 #define HALF ((real_t) 0.5)
-#define INF_REAL (std::numeric_limits<real_t>::infinity())
 
 #define LOSS_WEIGHTS_(v) (loss_weights ? loss_weights[(v)] : ONE)
 #define Ga_(v, vd) (gashape == MONODIM ? Ga[(v)] : Ga[(vd)])

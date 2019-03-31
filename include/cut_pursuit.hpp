@@ -122,6 +122,7 @@ public:
 protected:
     const size_t D; // dimension of the data; total size is V*D
     value_t *rX, *last_rX; // reduced iterate (values of the components)
+    comp_t saturation_count; // number of saturated components
 
     /**  main graph  **/
 
@@ -139,7 +140,7 @@ protected:
 
     /**  reduced graph  **/
 
-    comp_t rV; // number of components (reduced vertices)
+    comp_t rV, last_rV; // number of components (reduced vertices)
     size_t rE; // number of reduced edges
     comp_t *comp_assign; // assignment of each vertex to a component
     /* list the vertices of each components:
@@ -159,7 +160,7 @@ protected:
      * subroutine, controlling the number of subiterations between prints */
     int it_max, verbose; 
 
-    /* for stopping criterion or component saturation in convex problems */
+    /* for stopping criterion or component saturation */
     bool monitor_evolution;
 
     /**  methods for manipulating nodes and arcs in the flow graph  **/
@@ -240,8 +241,8 @@ protected:
     /**  monitoring evolution; set monitor_evolution to true  **/
 
     /* compute relative iterate evolution;
-     * for convex problems, components saturation should be checked here */
-    virtual real_t compute_evolution(bool compute_dif, comp_t& saturation) = 0;
+     * for continuously differentiable problems, saturation is tested here */
+    virtual real_t compute_evolution(bool compute_dif) = 0;
 
     /* compute objective functional, often on the reduced problem objects */
     virtual real_t compute_objective() = 0;
@@ -278,7 +279,7 @@ private:
 
     double monitor_time(std::chrono::steady_clock::time_point start);
 
-    void print_progress(int it, real_t dif, comp_t saturation, double t);
+    void print_progress(int it, real_t dif, double t);
 
     /* set components assignment and values (and allocate them if needed);
      * assumes that no edge of the graph are active when it is called */
@@ -288,7 +289,7 @@ private:
     void single_connected_component();
 
     /* auxiliary function for setting a new connected component */
-    void new_connected_component(comp_t& rv, index_t& comp_size);
+    void new_arbitrary_connected_component(comp_t& rv, index_t& comp_size);
 
     /* initialize approximately rV arbitrary connected components */
     void arbitrary_connected_components();
@@ -297,7 +298,7 @@ private:
     void assign_connected_components();
 
     /* update connected components and count saturated ones */
-    comp_t compute_connected_components();
+    void compute_connected_components();
 
     /* allocate and compute reduced graph structure */
     void compute_reduced_graph();

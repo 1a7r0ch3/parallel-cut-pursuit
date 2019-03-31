@@ -10,6 +10,7 @@
 #define ZERO ((real_t) 0.0)
 #define ONE ((real_t) 1.0)
 #define HALF ((real_t) 0.5)
+#define INF_REAL (std::numeric_limits<real_t>::infinity())
 #define EDGE_WEIGHTS_(e) (edge_weights ? edge_weights[(e)] : homo_edge_weight)
 #define LOSS_WEIGHTS_(v) (loss_weights ? loss_weights[(v)] : ONE)
 #define COOR_WEIGHTS_(d) (coor_weights ? coor_weights[(d)] : ONE)
@@ -24,10 +25,6 @@ TPL CP_D1_LSX::Cp_d1_lsx(index_t V, index_t E, const index_t* first_edge,
     Cp_d1<real_t, index_t, comp_t>(V, E, first_edge, adj_vertices, D, D11),
     Y(Y)
 {
-    /* ensure handling of infinite values (negation, comparisons) is safe */
-    static_assert(numeric_limits<real_t>::is_iec559,
-        "Cut-pursuit d1 loss simplex: real_t must satisfy IEEE 754.");
-
     if (numeric_limits<comp_t>::max() < D){
         cerr << "Cut-pursuit d1 loss simplex: comp_t must be able to represent"
             "the dimension D (" << D << ")." << endl;
@@ -222,8 +219,8 @@ TPL index_t CP_D1_LSX::split()
 
         /* initialize best ascent coordinate at the coordinate with maximum
          * value, corresponding to a null descent direction (1dmv - 1dmv) */
-        for (index_t v = first_vertex[rv]; v < first_vertex[rv + 1]; v++){
-            best_d[comp_list[v]] = dmv;
+        for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
+            best_d[comp_list[i]] = dmv;
         }
 
         /* iterate over all D - 1 alternative ascent coordinates */
@@ -327,13 +324,13 @@ TPL index_t CP_D1_LSX::split()
     return activation;
 }
 
-TPL real_t CP_D1_LSX::compute_evolution(bool compute_dif, comp_t & saturation)
+TPL real_t CP_D1_LSX::compute_evolution(bool compute_dif)
 {
-    comp_t num_ops = compute_dif ? V*D : saturation*D;
+    size_t num_ops = compute_dif ? D*V : D*saturation_count;
     real_t dif = ZERO;
-    saturation = 0;
+    comp_t saturation_par_count = 0; // auxiliary variable for parallel region
     #pragma omp parallel for schedule(dynamic) NUM_THREADS(num_ops, rV) \
-        reduction(+:dif, saturation)
+        reduction(+:dif, saturation_par_count)
     for (comp_t rv = 0; rv < rV; rv++){
         real_t* rXv = rX + rv*D;
         if (is_saturated(rv)){
@@ -342,18 +339,19 @@ TPL real_t CP_D1_LSX::compute_evolution(bool compute_dif, comp_t & saturation)
             real_t rv_dif = ZERO;
             for (size_t d = 0; d < D; d++){ rv_dif += abs(lrXv[d] - rXv[d]); }
             if (rv_dif > dif_tol){ set_saturation(rv, false); }
-            else{ saturation++; }
+            else{ saturation_par_count++; }
             if (compute_dif){
                 dif += rv_dif*(first_vertex[rv + 1] - first_vertex[rv]);
             }
         }else if (compute_dif){
-            for (index_t v = first_vertex[rv]; v < first_vertex[rv + 1]; v++){
-                real_t* lrXv = last_rX + get_tmp_comp_assign(comp_list[v])*D;
+            for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
+                real_t* lrXv = last_rX + get_tmp_comp_assign(comp_list[i])*D;
                 for (size_t d = 0; d < D; d++){ dif += abs(lrXv[d] - rXv[d]); }
             }
         }
     }
-    return compute_dif ? dif/V : ZERO;
+    saturation_count = saturation_par_count;
+    return compute_dif ? dif/V : INF_REAL;
 }
 
 TPL real_t CP_D1_LSX::compute_objective()

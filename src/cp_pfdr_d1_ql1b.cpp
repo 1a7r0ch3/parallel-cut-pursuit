@@ -135,8 +135,8 @@ TPL void CP_D1_QL1B::solve_reduced_problem()
         for (comp_t rv = 0; rv < rV; rv++){
             real_t *rAv = rA + N*rv; // rv-th column of rA
             /* run along the component rv */
-            for (index_t v = first_vertex[rv]; v < first_vertex[rv + 1]; v++){
-                const real_t *Av = A + N*comp_list[v];
+            for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
+                const real_t *Av = A + N*comp_list[i];
                 for (size_t n = 0; n < N; n++){ rAv[n] += Av[n]; }
             }
         }
@@ -171,9 +171,9 @@ TPL void CP_D1_QL1B::solve_reduced_problem()
             for (comp_t rv = 0; rv < rV; rv++){
                 rY[rv] = ZERO;
                 /* run along the component rv */
-                for (index_t v = first_vertex[rv];
-                    v < first_vertex[rv + 1]; v++){
-                    rY[rv] += Y[comp_list[v]];
+                for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1];
+                    i++){
+                    rY[rv] += Y[comp_list[i]];
                 }
             }
         }
@@ -185,13 +185,13 @@ TPL void CP_D1_QL1B::solve_reduced_problem()
                 for (comp_t rv = 0; rv <= ru; rv++){
                     rAAu[rv] = ZERO;
                     /* run along the component ru */
-                    for (index_t u = first_vertex[ru];
-                            u < first_vertex[ru + 1]; u++){
-                        const real_t *Au = A + (size_t) V*comp_list[u];
+                    for (index_t i = first_vertex[ru];
+                        i < first_vertex[ru + 1]; i++){
+                        const real_t *Au = A + (size_t) V*comp_list[i];
                         /* run along the component rv */
-                        for (index_t v = first_vertex[rv];
-                                v < first_vertex[rv + 1]; v++){
-                            rAAu[rv] += Au[comp_list[v]];
+                        for (index_t j = first_vertex[rv];
+                                j < first_vertex[rv + 1]; j++){
+                            rAAu[rv] += Au[comp_list[j]];
                         }
                     }
                 }
@@ -201,9 +201,9 @@ TPL void CP_D1_QL1B::solve_reduced_problem()
             for (comp_t rv = 0; rv < rV; rv++){
                 rAA[rv] = ZERO;
                 /* run along the component rv */
-                for (index_t v = first_vertex[rv];
-                        v < first_vertex[rv + 1]; v++){
-                    rAA[rv] += A[comp_list[v]];
+                for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1];
+                    i++){
+                    rAA[rv] += A[comp_list[i]];
                 }
             }
         }else if (a){ /* identity */
@@ -251,58 +251,39 @@ TPL void CP_D1_QL1B::solve_reduced_problem()
             if (l1_weights){
                 rl1_weights[rv] = ZERO;
                 /* run along the component rv */
-                for (index_t v = first_vertex[rv];
-                    v < first_vertex[rv + 1]; v++){
-                    rl1_weights[rv] += l1_weights[comp_list[v]];
+                for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1];
+                    i++){
+                    rl1_weights[rv] += l1_weights[comp_list[i]];
                 }
                 if (Yl1){
-                    if (is_saturated(rv)){ /* the component did not change,
-                        weighted median has been put at its correct place at
-                        last iteration */
-                        real_t wrk = HALF*rl1_weights[rv];
-                        /* avoid machine precision issues */
-                        wrk += (first_vertex[rv + 1] - first_vertex[rv])*eps;
-                        /* weighted median is the first to reach wrk */
-                        real_t wsum = ZERO;
-                        index_t i = first_vertex[rv];
-                        while ((wsum += l1_weights[comp_list[i]]) < wrk){
-                            i++;
-                        }
-                        rYl1[rv] = Yl1[comp_list[i]];
-                    }else{
-                        rYl1[rv] = wth_element(comp_list + first_vertex[rv],
-                            Yl1, first_vertex[rv + 1] - first_vertex[rv],
-                            (double) HALF*rl1_weights[rv], l1_weights);
-                        /* saturation is flagged on first vertex */
-                        set_saturation(rv, false);
-                    }
+                    /* saturation is flagged on first vertex */
+                    bool saturation = is_saturated(rv);
+                    rYl1[rv] = wth_element(comp_list + first_vertex[rv],
+                        Yl1, first_vertex[rv + 1] - first_vertex[rv],
+                        (double) HALF*rl1_weights[rv], l1_weights);
+                    /* ordering has changed, retrieve saturation info */
+                    set_saturation(rv, saturation);
                 }
             }else if (homo_l1_weight){
                 rl1_weights[rv] = (first_vertex[rv + 1] - first_vertex[rv])
                     *homo_l1_weight;
                 if (Yl1){
-                    if (is_saturated(rv)){ /* the component did not change,
-                        median has been put at its correct place at last
-                        iteration */
-                        rYl1[rv] = Yl1[comp_list[first_vertex[rv] +
-                            (first_vertex[rv + 1] - first_vertex[rv])/2]];
-                    }else{
-                        rYl1[rv] = nth_element_idx(
-                            comp_list + first_vertex[rv], Yl1,
-                            first_vertex[rv + 1] - first_vertex[rv],
-                            (first_vertex[rv + 1] - first_vertex[rv])/2);
-                        /* saturation is flagged on first vertex */
-                        set_saturation(rv, false);
-                    }
+                    /* saturation is flagged on first vertex */
+                    bool saturation = is_saturated(rv);
+                    rYl1[rv] = nth_element_idx(comp_list + first_vertex[rv],
+                        Yl1, first_vertex[rv + 1] - first_vertex[rv],
+                        (first_vertex[rv + 1] - first_vertex[rv])/2);
+                    /* ordering has changed, retrieve saturation info */
+                    set_saturation(rv, saturation);
                 }
             }
             if (low_bnd){
                 rlow_bnd[rv] = -INF_REAL;
                 /* run along the component rv */
-                for (index_t v = first_vertex[rv];
-                    v < first_vertex[rv + 1]; v++){
-                    if (rlow_bnd[rv] < low_bnd[comp_list[v]]){
-                        rlow_bnd[rv] = low_bnd[comp_list[v]];
+                for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1];
+                    i++){
+                    if (rlow_bnd[rv] < low_bnd[comp_list[i]]){
+                        rlow_bnd[rv] = low_bnd[comp_list[i]];
                     }
                 }
             }
@@ -310,10 +291,10 @@ TPL void CP_D1_QL1B::solve_reduced_problem()
             if (upp_bnd){
                 rupp_bnd[rv] = INF_REAL;
                 /* run along the component rv */
-                for (index_t v = first_vertex[rv];
-                    v < first_vertex[rv + 1]; v++){
-                    if (rupp_bnd[rv] > upp_bnd[comp_list[v]]){
-                        rupp_bnd[rv] = upp_bnd[comp_list[v]];
+                for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1];
+                    i++){
+                    if (rupp_bnd[rv] > upp_bnd[comp_list[i]]){
+                        rupp_bnd[rv] = upp_bnd[comp_list[i]];
                     }
                 }
             }
@@ -395,10 +376,10 @@ TPL index_t CP_D1_QL1B::split()
                 if (rX[rv] == ZERO){ continue; }
                 real_t aurv = ZERO; /* sum u-th row of (A^t A), rv-th comp */
                 /* run along the component rv */
-                for (index_t v = first_vertex[rv];
-                        v < first_vertex[rv + 1]; v++){
+                for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1];
+                    i++){
                     /* can sum column wise, by symmetry */
-                    aurv += Au[comp_list[v]]; 
+                    aurv += Au[comp_list[i]]; 
                 }
                 grad[u] += aurv*rX[rv];
             }
@@ -476,8 +457,8 @@ TPL index_t CP_D1_QL1B::split()
                 if (rX[rv] == upp_bnd[v]){ set_term_capacities(v, INF_REAL); }
             }
         }else if (homo_upp_bnd < INF_REAL && rX[rv] == homo_upp_bnd){
-            for (index_t v = first_vertex[rv]; v < first_vertex[rv + 1]; v++){
-                set_term_capacities(comp_list[v], INF_REAL);
+            for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
+                set_term_capacities(comp_list[i], INF_REAL);
             }
         }
         /* set the d1 edge capacities */
@@ -535,8 +516,8 @@ TPL index_t CP_D1_QL1B::split()
                 if (rX[rv] == low_bnd[v]){ set_term_capacities(v, -INF_REAL); }
             }
         }else if (homo_low_bnd > -INF_REAL && rX[rv] == homo_low_bnd){
-            for (index_t v = first_vertex[rv]; v < first_vertex[rv + 1]; v++){
-                set_term_capacities(comp_list[v], -INF_REAL);
+            for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
+                set_term_capacities(comp_list[i], -INF_REAL);
             }
         }
         /* set the d1 edge capacities */
@@ -576,13 +557,13 @@ TPL index_t CP_D1_QL1B::split()
     return activation;
 }
 
-TPL real_t CP_D1_QL1B::compute_evolution(bool compute_dif, comp_t & saturation)
+TPL real_t CP_D1_QL1B::compute_evolution(bool compute_dif)
 {
-    comp_t num_ops = compute_dif ? V : saturation;
+    size_t num_ops = compute_dif ? V : saturation_count;
     real_t dif = ZERO, amp = ZERO;
-    saturation = 0;
+    comp_t saturation_par_count = 0; // auxiliary variable for parallel region
     #pragma omp parallel for schedule(dynamic) NUM_THREADS(num_ops, rV) \
-        reduction(+:dif, amp, saturation)
+        reduction(+:dif, amp, saturation_par_count)
     for (comp_t rv = 0; rv < rV; rv++){  
         real_t rXv = rX[rv];
         if (is_saturated(rv)){
@@ -590,7 +571,7 @@ TPL real_t CP_D1_QL1B::compute_evolution(bool compute_dif, comp_t & saturation)
                 last_rX[get_tmp_comp_assign(comp_list[first_vertex[rv]])];
             real_t rv_dif = abs(rXv - lrXv);
             if (rv_dif > abs(rX[rv])*dif_tol){ set_saturation(rv, false); }
-            else{ saturation++; }
+            else{ saturation_par_count++; }
             if (compute_dif){
                 dif += rv_dif*rv_dif*(first_vertex[rv + 1] - first_vertex[rv]);
                 amp += rXv*rXv*(first_vertex[rv + 1] - first_vertex[rv]);
@@ -603,12 +584,13 @@ TPL real_t CP_D1_QL1B::compute_evolution(bool compute_dif, comp_t & saturation)
             amp += rXv*rXv*(first_vertex[rv + 1] - first_vertex[rv]);
         }
     }
+    saturation_count = saturation_par_count;
     if (compute_dif){
         dif = sqrt(dif);
         amp = sqrt(amp);
         return amp > eps ? dif/amp : dif/eps;
     }else{
-        return ZERO;
+        return INF_REAL;
     }
 }
 
@@ -635,23 +617,23 @@ TPL real_t CP_D1_QL1B::compute_objective()
             for (comp_t rv = 0; rv <= ru; rv++){
                 real_t rAAuv = ZERO;
                 /* run along the component ru */
-                for (index_t u = first_vertex[ru];
-                        u < first_vertex[ru + 1]; u++){
-                    const real_t *Au = A + (size_t) V*comp_list[u];
+                for (index_t i = first_vertex[ru]; i < first_vertex[ru + 1];
+                    i++){
+                    const real_t *Au = A + (size_t) V*comp_list[i];
                     /* run along the component rv */
-                    for (index_t v = first_vertex[rv];
-                            v < first_vertex[rv + 1]; v++){
-                        rAAuv += Au[comp_list[v]];
+                    for (index_t j = first_vertex[rv];
+                        j < first_vertex[rv + 1]; j++){
+                        rAAuv += Au[comp_list[j]];
                     }
                 }
                 if (rv < ru){ sumrAAuvXv += rAAuv*rX[rv]; }
                 else{ sumrAAuvXv += HALF*rAAuv*rX[ru]; }
             }
             real_t rAYu = ZERO;
-            for (index_t u = first_vertex[ru];
-                    u < first_vertex[ru + 1]; u++){
+            for (index_t i = first_vertex[ru]; i < first_vertex[ru + 1];
+                i++){
                 /* observation Y is actually A^t Y */
-                rAYu += Y_(comp_list[u]);
+                rAYu += Y_(comp_list[i]);
             }
             obj += rX[ru]*(sumrAAuvXv - rAYu);
         }
@@ -663,10 +645,10 @@ TPL real_t CP_D1_QL1B::compute_objective()
                 first_vertex[rv + 1] - first_vertex[rv]; // identity
             real_t rAYv = ZERO;
             /* run along the component rv */
-            for (index_t v = first_vertex[rv]; v < first_vertex[rv + 1]; v++){
-                if (A){ rAAv += A[comp_list[v]]; }
+            for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
+                if (A){ rAAv += A[comp_list[i]]; }
                 /* observation Y is actually A^t Y */
-                rAYv += Y_(comp_list[v]);
+                rAYv += Y_(comp_list[i]);
             }
             obj += rX[rv]*(HALF*rAAv*rX[rv] - rAYv);
         }
@@ -687,8 +669,8 @@ TPL real_t CP_D1_QL1B::compute_objective()
         #pragma omp parallel for schedule(dynamic) NUM_THREADS(V, rV) \
              reduction(+:l1)
         for (comp_t rv = 0; rv < rV; rv++){
-            for (index_t v = first_vertex[rv]; v < first_vertex[rv + 1]; v++){
-                l1 += abs(rX[rv] - Yl1_(comp_list[v]));
+            for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
+                l1 += abs(rX[rv] - Yl1_(comp_list[i]));
             }
         }
         obj += homo_l1_weight*l1;

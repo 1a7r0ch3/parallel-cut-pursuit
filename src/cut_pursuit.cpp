@@ -6,6 +6,7 @@
 
 #define ZERO ((real_t) 0.0)
 #define ONE ((real_t) 1.0)
+#define INF_REAL (std::numeric_limits<real_t>::infinity())
 #define EDGE_WEIGHTS_(e) (edge_weights ? edge_weights[(e)] : homo_edge_weight)
 /* avoid overflows */
 #define rVp1 ((size_t) rV + 1)
@@ -13,6 +14,7 @@
 #define NOT_ASSIGNED MAX_NUM_COMP
 #define ASSIGNED ((comp_t) 1)
 #define ASSIGNED_ROOT ((comp_t) 2)
+#define NOT_SATURATED ((comp_t) 0)
 /* maximum number of edges; no edge can have this identifier */
 #define NO_EDGE (std::numeric_limits<index_t>::max())
 
@@ -26,6 +28,10 @@ TPL CP::Cp(index_t V, index_t E, const index_t* first_edge,
     const index_t* adj_vertices, size_t D)
     : V(V), E(E), first_edge(first_edge), adj_vertices(adj_vertices), D(D)
 {
+    /* real type with infinity is handy */
+    static_assert(numeric_limits<real_t>::has_infinity,
+        "Cut-pursuit: real_t must be able to represent infinity.");
+
     /* construct graph */
     G = new Cp_graph<real_t, index_t, comp_t>(V, E);
     G->add_node(V);
@@ -38,6 +44,7 @@ TPL CP::Cp(index_t V, index_t E, const index_t* first_edge,
     /* source/sink edges does not need to be initialized */
 
     rV = 1; rE = 0;
+    last_rV = 0;
     edge_weights = nullptr;
     homo_edge_weight = ONE;
     comp_assign = nullptr;
@@ -129,21 +136,25 @@ TPL int CP::cut_pursuit(bool init)
 {
     int it = 0;
     double timer = 0.0;
-    real_t dif = dif_tol > ONE ? dif_tol : ONE;
-    comp_t saturation = 0;
+    real_t dif = INF_REAL;
 
     chrono::steady_clock::time_point start;
     if (elapsed_time){ start = chrono::steady_clock::now(); }
     if (init){
-        if (verbose){ cout << "\tCut-pursuit initialization:" << endl; }
+        if (verbose){ cout << "Cut-pursuit initialization:" << endl; }
         initialize();
         if (objective_values){ objective_values[0] = compute_objective(); }
     }
 
     while (true){
         if (elapsed_time){ elapsed_time[it] = timer = monitor_time(start); }
-        if (verbose){ print_progress(it, dif, saturation, timer); }
-        if (it == it_max || dif < dif_tol){ break; }
+        if (verbose){ print_progress(it, dif, timer); }
+        if (it == it_max || dif <= dif_tol){ break; }
+
+        if (verbose){
+            cout << "Cut-pursuit iteration " << it + 1 << " (max. " << it_max
+                << "): " << endl;
+        }
 
         if (verbose){ cout << "\tSplit... " << flush; }
         index_t activation = split();
@@ -152,7 +163,7 @@ TPL int CP::cut_pursuit(bool init)
         }
 
         if (!activation){ /* do not recompute reduced problem */
-            saturation = rV;
+            saturation_count = rV;
             if (dif_tol > ZERO || iterate_evolution){
                 dif = ZERO;
                 if (iterate_evolution){ iterate_evolution[it] = dif; }
@@ -164,26 +175,27 @@ TPL int CP::cut_pursuit(bool init)
                 objective_values[it] = objective_values[it - 1];
             }
             continue;
-        }else{ /* reduced graph and components will be updated */
-            if (monitor_evolution){
-                /* store last iterate values */
+        }else{
+            /* store previous component assignment */
+            for (index_t v = 0; v < V; v++){
+                set_tmp_comp_assign(v, comp_assign[v]);
+            }
+            last_rV = rV;
+            if (monitor_evolution){ /* store also last iterate values */
                 last_rX = (real_t*) malloc_check(sizeof(real_t)*D*rV);
                 for (size_t i = 0; i < D*rV; i++){ last_rX[i] = rX[i]; }
-                /* store previous assignment */
-                for (index_t v = 0; v < V; v++){
-                    set_tmp_comp_assign(v, comp_assign[v]);
-                }
             }
+            /* reduced graph and components will be updated */
             free(rX); rX = nullptr;
             free(reduced_edges); reduced_edges = nullptr;
             free(reduced_edge_weights); reduced_edge_weights = nullptr;
         }
 
         if (verbose){ cout << "\tCompute connected components... " << flush; }
-        saturation = compute_connected_components();
+        compute_connected_components();
         if (verbose){
-            cout << rV << " connected component(s); "
-                << saturation << " saturated." << endl;
+            cout << rV << " connected component(s), " << saturation_count <<
+                " saturated." << endl;
         }
 
         if (verbose){ cout << "\tCompute reduced graph... " << flush; }
@@ -200,8 +212,7 @@ TPL int CP::cut_pursuit(bool init)
         }
 
         if (monitor_evolution){
-            dif = compute_evolution(dif_tol > ZERO || iterate_evolution,
-                saturation);
+            dif = compute_evolution(dif_tol > ZERO || iterate_evolution);
             if (iterate_evolution){ iterate_evolution[it] = dif; }
             free(last_rX); last_rX = nullptr;
         }
@@ -222,20 +233,18 @@ TPL double CP::monitor_time(chrono::steady_clock::time_point start)
                / static_cast<double>(steady_clock::period::den);
 }
 
-TPL void CP::print_progress(int it, real_t dif, comp_t saturation,
-    double timer)
+TPL void CP::print_progress(int it, real_t dif, double timer)
 {
-    cout << "\n\tCut-pursuit iteration " << it << " (max. " << it_max << ")\n";
-    if (dif_tol > ZERO || iterate_evolution){
+    if (it && (dif_tol > ZERO || iterate_evolution)){
         cout.precision(2);
         cout << scientific << "\trelative iterate evolution " << dif
             << " (tol. " << dif_tol << ")\n";
     }
-    cout << "\t" << rV << " connected component(s), " << saturation <<
-        " saturated, and at most " << rE << " reduced edge(s)\n";
+    cout << "\t" << rV << " connected component(s), " << saturation_count <<
+        " saturated, and at most " << rE << " reduced edge(s).\n";
     if (timer > 0.0){
         cout.precision(1);
-        cout << fixed << "\telapsed time " << fixed << timer << " s\n";
+        cout << fixed << "\telapsed time " << fixed << timer << " s.\n";
     }
     cout << endl;
 }
@@ -247,10 +256,9 @@ TPL void CP::single_connected_component()
     first_vertex = (index_t*) malloc_check(sizeof(index_t)*2);
     first_vertex[0] = 0; first_vertex[1] = V;
     for (index_t v = 0; v < V; v++){ comp_list[v] = v; }
-    set_saturation(0, false);
 }
 
-TPL void CP::new_connected_component(comp_t& rv, index_t& comp_size)
+TPL void CP::new_arbitrary_connected_component(comp_t& rv, index_t& comp_size)
 {
     if (rv == rV){
         rV = (size_t) 2*rV < MAX_NUM_COMP ? (size_t) 2*rV : MAX_NUM_COMP;
@@ -302,12 +310,12 @@ TPL void CP::arbitrary_connected_components()
                 comp_size++;
                 comp_list[j++] = w;
                 if (comp_size == max_comp_size){ // change component
-                    new_connected_component(rv, comp_size);
+                    new_arbitrary_connected_component(rv, comp_size);
                 }
             }
         } // the current connected component cannot grow anymore
         if (comp_size > 0){ // add the current component
-            new_connected_component(rv, comp_size);
+            new_arbitrary_connected_component(rv, comp_size);
         }
     }
     /* update components lists and assignments */
@@ -344,24 +352,22 @@ TPL void CP::assign_connected_components()
         first_vertex[rv] = first_vertex[rv - 1];
     }
     first_vertex[0] = 0;
-    for (comp_t rv = 0; rv < rV; rv++){ set_saturation(rv, false); }
 }
 
-TPL comp_t CP::compute_connected_components()
+TPL void CP::compute_connected_components()
 {
-    comp_t saturation = 0;
-
     /* cleanup assigned components */
     for (index_t v = 0; v < V; v++){ comp_assign[v] = NOT_ASSIGNED; }
 
+    comp_t saturation_par_count = 0; // auxiliary variable for parallel region
     index_t rVtmp = 0; // identify and count components, prevent overflow
     /* new connected components hierarchically derives from the previous ones,
      * we can thus compute them in parallel along previous components */
     #pragma omp parallel for schedule(dynamic) NUM_THREADS(2*E, rV) \
-        reduction(+:rVtmp, saturation)
+        reduction(+:rVtmp, saturation_par_count)
     for (comp_t rv = 0; rv < rV; rv++){
         if (is_saturated(rv)){ // component stays the same
-            saturation++;
+            saturation_par_count++;
             index_t i = first_vertex[rv];
             index_t v = comp_list[i];
             comp_assign[v] = ASSIGNED_ROOT; // flag the component's root
@@ -397,6 +403,7 @@ TPL comp_t CP::compute_connected_components()
             rVtmp++;
         }
     }
+    saturation_count = saturation_par_count;
 
     if (rVtmp > MAX_NUM_COMP){
         cerr << "Cut-pursuit: number of components (" << rVtmp << ") greater "
@@ -405,7 +412,11 @@ TPL comp_t CP::compute_connected_components()
         exit(EXIT_FAILURE);
     }
 
-    /* update components lists and assignments */
+    /* update components lists and assignments;
+     * the split is hierarchical, that is each component rv is comprised
+     * within a previous iteration component last_rv, and since the new
+     * component list is processed in increasing order of vertex identifiers,
+     * it is guaranteed that rv >= last_rv */
     rV = rVtmp;
     free(first_vertex);
     first_vertex = (index_t*) malloc_check(sizeof(index_t)*rVp1);
@@ -416,8 +427,6 @@ TPL comp_t CP::compute_connected_components()
         comp_assign[v] = rv;
     }
     first_vertex[rV] = V;
-
-    return saturation;
 }
 
 TPL void CP::compute_reduced_graph()
@@ -531,6 +540,10 @@ TPL void CP::initialize()
         else{ assign_connected_components(); }
     }
 
+    last_rV = 0;
+    for (comp_t rv = 0; rv < rV; rv++){ set_saturation(rv, false); }
+    saturation_count = 0;
+
     compute_reduced_graph();
     solve_reduced_problem();
     merge();
@@ -544,15 +557,15 @@ TPL void CP::merge_components(comp_t& ru, comp_t& rv)
     merge_chains_next[merge_chains_leaf[ru]] = rv;
     merge_chains_leaf[ru] = merge_chains_leaf[rv];
     merge_chains_root[rv] = merge_chains_root[merge_chains_leaf[rv]] = ru;
-    set_saturation(ru, false); // component has changed
+    /* saturation considerations are taken care of in merge method */
 }
 
 TPL index_t CP::merge()
 {
-    /* if (rE == 0){ return 0; } currently, isolated compoents are linked
+    /* if (rE == 0){ return 0; } currently, isolated components are linked
      * to themselve in the reduced graph, thus rE is at least one */
     
-    /* create the chains representing the merged components */
+    /**  create the chains representing the merged components  **/
     merge_chains_root = (comp_t*) malloc_check(sizeof(comp_t)*rV); 
     merge_chains_next = (comp_t*) malloc_check(sizeof(comp_t)*rV);
     merge_chains_leaf = (comp_t*) malloc_check(sizeof(comp_t)*rV);
@@ -569,29 +582,96 @@ TPL index_t CP::merge()
         return 0;
     }
 
-    /* construct a new version of 'comp_list' in temporary storage and update
-     * 'rX', 'first_vertex', and 'reduced_edges' and '_weights' in-place */
-    comp_t* new_comp_id = merge_chains_leaf; // reuse storage
+    /**  at this point, three different component assignements exists:
+     **  the one from previous iteration (in tmp_comp_assign),
+     **  the current one after the split (in comp_assign), and
+     **  the final one after the merge (to be computed now)  **/
+
+    /**  compare previous iterate and final assignment, and flag nonevolving
+     **  components as saturated (to prevent repeated split-and-merge)  **/
+    comp_t* saturation_flag = merge_chains_leaf; // reuse storage
+    if (last_rV){ // previous assignment available
+        /* a previous component is nonevolving if it can be assigned a unique
+         * final component */
+        for (comp_t last_rv = 0; last_rv < last_rV; last_rv++){ //last_rV <= rV
+            saturation_flag[last_rv] = NOT_ASSIGNED;
+        }
+        for (comp_t ru = 0; ru < rV; ru++){
+            if (merge_chains_root[ru] != CHAIN_ROOT){ continue; }
+            comp_t last_ru = get_tmp_comp_assign(comp_list[first_vertex[ru]]);
+            if (saturation_flag[last_ru] == NOT_ASSIGNED){
+                saturation_flag[last_ru] = ASSIGNED;
+            }else{ /* was already assigned another final component */
+                saturation_flag[last_ru] = NOT_SATURATED;
+            }
+            /* run along the merge chain */
+            comp_t rv = ru; 
+            while (rv != CHAIN_LEAF){
+                comp_t last_rv =
+                    get_tmp_comp_assign(comp_list[first_vertex[rv]]);
+                if (last_ru != last_rv){ /* previous components do not agree */
+                    saturation_flag[last_ru] = saturation_flag[last_rv] =
+                        NOT_SATURATED;
+                }
+                rv = merge_chains_next[rv];
+            }
+        }
+        /* flag each root component with the saturation of its corresponding
+         * previous component; can be done in-place because rv >= last_rv;
+         * this allows for reusing the same storage for final comp below */
+        for (comp_t rv = rV; rv > 0;){
+            rv--;
+            if (merge_chains_root[rv] != CHAIN_ROOT){ continue; }
+            comp_t last_rv = get_tmp_comp_assign(comp_list[first_vertex[rv]]);
+            saturation_flag[rv] = saturation_flag[last_rv];
+        }
+    }else{ // last_rV is zero, indicating no previous assignment
+        for (comp_t rv = 0; rv < rV; rv++){
+            if (merge_chains_root[rv] == CHAIN_ROOT){
+                saturation_flag[rv] = NOT_SATURATED;
+            }
+        }
+    }
+
+    /**  construct the final component lists in temporary storage, update
+     **  components values and first vertex indices in-place, and flag final
+     **  saturation  **/
+    saturation_count = 0;
     comp_t rn = 0; // component number
-    index_t i = 0; // index in the new comp_list
+    index_t i = 0; // index in the final comp_list
+    /* each current component is assigned its final component */
+    comp_t* final_comp = merge_chains_leaf; // reuse storage in-place
     for (comp_t ru = 0; ru < rV; ru++){
         if (merge_chains_root[ru] != CHAIN_ROOT){ continue; }
-        /* otherwise ru is a root, create the corresponding new component */
+        /**  ru is a root, create the corresponding final component  **/
+        /* saturation flagged on first vertex of ru, also first vertex of rn;
+         * note also that final comp uses the same storage as saturation flag,
+         * but there is no conflict because ru is a root, untouched so far */
+        if (saturation_flag[ru] == ASSIGNED){
+            saturation_count++;
+            set_saturation(ru, true); 
+        }else{
+            set_saturation(ru, false);
+        }
+        /* copy component value, in-place because rn <= ru guaranteed */
         const value_t* rXu = rX + D*ru;
         value_t* rXn = rX + D*rn;
         for (size_t d = 0; d < D; d++){ rXn[d] = rXu[d]; }
-        comp_t rv = ru; 
+        /* run along the merge chain */
         index_t first = i; // holds index of first vertex of the component
+        comp_t rv = ru;
         while (rv != CHAIN_LEAF){
-            new_comp_id[rv] = rn;
-            for (index_t v = first_vertex[rv]; v < first_vertex[rv + 1]; v++){
-                set_tmp_comp_list(i++, comp_list[v]);
+            final_comp[rv] = rn;
+            /* assign all vertices to final component */ 
+            for (index_t j = first_vertex[rv]; j < first_vertex[rv + 1]; j++){
+                set_tmp_comp_list(i++, comp_list[j]);
             }
             rv = merge_chains_next[rv];
         }
-        /* the root of each chain is the smallest component in the chain, so
-         * now that 'rn' new components have been constructed, the first 'rn'
-         * previous components have been copied, hence 'first_vertex' will not
+        /* the root of each chain is the smallest component in the chain, and
+         * the current components are visited in increasing order, so now that
+         * 'rn' final components have been constructed, at least the first 'rn'
+         * current components have been copied, hence 'first_vertex' will not
          * be accessed before position 'rn' anymore; thus modify in-place */
         first_vertex[rn++] = first;
     }
@@ -600,27 +680,28 @@ TPL index_t CP::merge()
     first_vertex = (index_t*) realloc_check(first_vertex,
         sizeof(index_t)*rVp1);
     rX = (real_t*) realloc_check(rX, sizeof(real_t)*D*rV);
-    for (index_t v = 0; v < V; v++){ /* update components assignments */
+    /* update components assignments */
+    for (index_t v = 0; v < V; v++){ 
         comp_list[v] = get_tmp_comp_list(v);
-        comp_assign[v] = new_comp_id[comp_assign[v]];
+        comp_assign[v] = final_comp[comp_assign[v]];
     }
 
-    /* update corresponding reduced edges;
+    /* update corresponding reduced edges and weights in-place;
      * some edges will appear several times in the list, important thing is
      * that the corresponding weights sum up to the right quantity;
      * note that rE is thus an upper bound of the actual number of edges */
-    size_t new_re = 0;
+    size_t final_re = 0;
     for (size_t re = 0; re < rE; re++){
-        comp_t new_ru = new_comp_id[reduced_edges[2*re]];
-        comp_t new_rv = new_comp_id[reduced_edges[2*re + 1]];
-        if (new_ru != new_rv){
-            reduced_edges[2*new_re] = new_ru;
-            reduced_edges[2*new_re + 1] = new_rv;
-            reduced_edge_weights[new_re] = reduced_edge_weights[re];
-            new_re++;
+        comp_t final_ru = final_comp[reduced_edges[2*re]];
+        comp_t final_rv = final_comp[reduced_edges[2*re + 1]];
+        if (final_ru != final_rv){
+            reduced_edges[2*final_re] = final_ru;
+            reduced_edges[2*final_re + 1] = final_rv;
+            reduced_edge_weights[final_re] = reduced_edge_weights[re];
+            final_re++;
         }
     }
-    rE = new_re;
+    rE = final_re;
     reduced_edges = (comp_t*) realloc_check(reduced_edges,
             sizeof(comp_t)*2*rE);
     reduced_edge_weights = (real_t*) realloc_check(reduced_edge_weights,

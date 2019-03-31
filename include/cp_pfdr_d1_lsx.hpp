@@ -128,17 +128,18 @@ private:
     index_t split() override;
 
     /* relative iterate evolution in l1 norm and components saturation */
-    real_t compute_evolution(bool compute_dif, comp_t & saturation) override;
+    real_t compute_evolution(bool compute_dif) override;
 
     real_t compute_objective() override;
 
     /**  type resolution for base template class members  **/
     using Cp_d1<real_t, index_t, comp_t>::D11;
-    using Cp_d1<real_t, index_t, comp_t>::D;
-    using Cp_d1<real_t, index_t, comp_t>::rX;
-    using Cp_d1<real_t, index_t, comp_t>::last_rX;
     using Cp_d1<real_t, index_t, comp_t>::coor_weights;
     using Cp_d1<real_t, index_t, comp_t>::compute_graph_d1;
+    using Cp<real_t, index_t, comp_t>::D;
+    using Cp<real_t, index_t, comp_t>::rX;
+    using Cp<real_t, index_t, comp_t>::last_rX;
+    using Cp<real_t, index_t, comp_t>::saturation_count;
     using Cp<real_t, index_t, comp_t>::monitor_evolution;
     using Cp<real_t, index_t, comp_t>::is_active;
     using Cp<real_t, index_t, comp_t>::set_active;
