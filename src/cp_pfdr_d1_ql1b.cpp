@@ -97,12 +97,6 @@ TPL void CP_D1_QL1B::solve_reduced_problem()
  * the weighted sum of distances to Yl1 by the distance to the weighted median
  * of Yl1 */
 {
-    if (rX){
-        return;
-    }else{
-        rX = (real_t*) malloc_check(sizeof(real_t)*rV);
-    }
-
     /**  compute reduced matrix  **/
     real_t *rY, *rA, *rAA; // reduced observations, matrix, etc.
     rY = rA = rAA = nullptr;

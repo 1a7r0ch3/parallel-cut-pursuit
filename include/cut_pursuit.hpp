@@ -200,7 +200,7 @@ protected:
     /* get a parallel copy of the flow graph */
     Cp_graph<real_t, index_t, comp_t>* get_parallel_flow_graph();
 
-    /* allocate and compute reduced values */
+    /* compute reduced values */
     virtual void solve_reduced_problem() = 0;
 
     /* split components with graph cuts, by activating edges */
@@ -257,7 +257,12 @@ protected:
         return ptr;
     }
 
+    /* simply free if size is zero */
     static void* realloc_check(void* ptr, size_t size){
+        if (!size){
+           free(ptr); 
+           return nullptr; 
+        }
         ptr = realloc(ptr, size);
         if (!ptr){
             std::cerr << "Cut-pursuit: not enough memory." << std::endl;

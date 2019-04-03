@@ -151,8 +151,7 @@ private:
 
     /**  methods  **/
 
-    /* allocate and compute reduced values;
-     * do nothing if the array of reduced values is not null;
+    /* compute reduced values;
      * NOTA: if Yl1 is not constant, this actually solves only an approximation
      * of the reduced problem, replacing the weighted sum of distances to Yl1
      * by the distance to the weighted median of Yl1 */

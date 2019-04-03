@@ -86,9 +86,9 @@ public:
 protected:
     /**  structure  **/
 
-    const size_t D; // dimension of each data point
-    const size_t aux_size; // size of auxiliary variables
     const index_t size; // number of data points; total dimension is D*size
+    const size_t aux_size; // size of auxiliary variables
+    const size_t D; // dimension of each data point
     /* auxiliary variable i corresponds to main coordinate aux_idx[i];
      * set to null for aux_idx[i] = i % size, in which case usually aux_size is
      * a multiple of size, and wshape is SCALAR */

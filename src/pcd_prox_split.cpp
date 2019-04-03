@@ -19,11 +19,11 @@ TPL PCD_PROX::Pcd_prox(size_t size) : size(size)
 {
     name = "Preconditioned proximal splitting algorithm";
     objective_values = iterate_evolution = nullptr;
-    real_t cond_min = 1e-2;
-    real_t dif_rcd = 1e-4;
-    real_t dif_tol = 1e-5;
-    int it_max = 1e4;
-    int verbose = 1e2;
+    cond_min = 1e-2;
+    dif_rcd = 1e-4;
+    dif_tol = 1e-5;
+    it_max = 1e4;
+    verbose = 1e2;
     eps = numeric_limits<real_t>::epsilon();
     X = nullptr;
 }

@@ -182,7 +182,7 @@ TPL int CP::cut_pursuit(bool init)
             }
             last_rV = rV;
             if (monitor_evolution){ /* store also last iterate values */
-                last_rX = (real_t*) malloc_check(sizeof(real_t)*D*rV);
+                last_rX = (value_t*) malloc_check(sizeof(value_t)*D*rV);
                 for (size_t i = 0; i < D*rV; i++){ last_rX[i] = rX[i]; }
             }
             /* reduced graph and components will be updated */
@@ -203,6 +203,7 @@ TPL int CP::cut_pursuit(bool init)
         if (verbose){ cout << rE << " reduced edge(s)." << endl; }
 
         if (verbose){ cout << "\tSolve reduced problem: " << endl; }
+        rX = (value_t*) malloc_check(sizeof(value_t)*D*rV);
         solve_reduced_problem();
 
         if (verbose){ cout << "\tMerge... " << flush; }
@@ -522,6 +523,7 @@ TPL void CP::compute_reduced_graph()
 
 TPL void CP::initialize()
 {
+    free(rX); 
     if (!comp_assign){
         comp_assign = (comp_t*) malloc_check(sizeof(comp_t)*V);
     }
@@ -531,7 +533,7 @@ TPL void CP::initialize()
 
     bool arbitrary = rV == 0;
     /* E/100 is an heuristic ensuring that it is worth parallelizing */
-    if (arbitrary){ rV = compute_num_threads((uintmax_t) E/100); }
+    if (arbitrary){ rV = compute_num_threads(E/100); }
 
     if (rV == 1){
         single_connected_component();
@@ -545,6 +547,7 @@ TPL void CP::initialize()
     saturation_count = 0;
 
     compute_reduced_graph();
+    rX = (value_t*) malloc_check(sizeof(value_t)*D*rV);
     solve_reduced_problem();
     merge();
 }
@@ -562,9 +565,8 @@ TPL void CP::merge_components(comp_t& ru, comp_t& rv)
 
 TPL index_t CP::merge()
 {
-    /* if (rE == 0){ return 0; } currently, isolated components are linked
-     * to themselve in the reduced graph, thus rE is at least one */
-    
+    if (rE == 0){ return 0; }
+
     /**  create the chains representing the merged components  **/
     merge_chains_root = (comp_t*) malloc_check(sizeof(comp_t)*rV); 
     merge_chains_next = (comp_t*) malloc_check(sizeof(comp_t)*rV);
@@ -679,7 +681,7 @@ TPL index_t CP::merge()
     first_vertex[rV = rn] = V;
     first_vertex = (index_t*) realloc_check(first_vertex,
         sizeof(index_t)*rVp1);
-    rX = (real_t*) realloc_check(rX, sizeof(real_t)*D*rV);
+    rX = (value_t*) realloc_check(rX, sizeof(value_t)*D*rV);
     /* update components assignments */
     for (index_t v = 0; v < V; v++){ 
         comp_list[v] = get_tmp_comp_list(v);

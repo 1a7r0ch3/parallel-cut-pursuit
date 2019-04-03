@@ -121,8 +121,7 @@ private:
 
     /**  methods  **/
 
-    /* allocate and compute reduced values;
-     * do nothing if the array of reduced values is not null */
+    /* compute reduced values */
     void solve_reduced_problem() override;
 
     index_t split() override;

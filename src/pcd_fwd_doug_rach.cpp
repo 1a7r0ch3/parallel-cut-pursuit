@@ -194,7 +194,7 @@ TPL void PFDR::preconditioning(bool init)
         if (Z_Id){
             #pragma omp parallel for schedule(static) NUM_THREADS(D*size, size)
             for (index_t i = 0; i < size; i++){
-                size_t id = id*D;
+                size_t id = i*D;
                 for (size_t d = 0; d < D; d++){
                     Z_Id[id] = (Id_W_(i, id)/Ga_(i, id))
                         *(X[id] - Ga_grad_f[id] - Z_Id[id]);

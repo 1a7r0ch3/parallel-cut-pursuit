@@ -67,12 +67,6 @@ TPL void CP_D1_LSX::set_pfdr_param(real_t rho, real_t cond_min, real_t dif_rcd,
 
 TPL void CP_D1_LSX::solve_reduced_problem()
 {
-    if (rX){
-        return;
-    }else{
-        rX = (real_t*) malloc_check(sizeof(real_t)*D*rV);
-    } 
-
     if (rV == 1){ /**  single connected component  **/
 
         #pragma omp parallel for schedule(static) NUM_THREADS(D*V, D)
