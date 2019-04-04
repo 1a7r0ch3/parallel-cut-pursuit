@@ -19,14 +19,14 @@ numberOfColors = 256;
 darkLevel = 1/16;
 
 %%%  parameters; see octave/doc/cp_pfdr_d1_ql1b_mex.m %%%
-CP_difTol = 1e-4;
-CP_itMax = 15;
-PFDR_rho = 1.5;
-PFDR_condMin = 1e-2;
-PFDR_difRcd = 0;
-PFDR_difTol = 1e-3*CP_difTol;
-PFDR_itMax = 1e4;
-PFDR_verbose = 1e3;
+cp_dif_tol = 1e-4;
+cp_it_max = 15;
+pfdr_rho = 1.5;
+pfdr_cond_min = 1e-2;
+pfdr_dif_rcd = 0;
+pfdr_dif_tol = 1e-3*cp_dif_tol;
+pfdr_it_max = 1e4;
+pfdr_verbose = 1e3;
 
 %%%  initialize data  %%%
 % dataset courtesy of Ahmad Karfoul and Isabelle Merlet, LTSI, INSERM U1099
@@ -71,17 +71,17 @@ end
 
 %%%  solve the optimization problem  %%%
 tic;
-Yl1 = []; Lbnd = 0.0; Ubnd = Inf;
+Yl1 = []; low_bnd = 0.0; upp_bnd = Inf;
 [cv, rx] = cp_pfdr_d1_ql1b_mex(y, Phi, first_edge, ...
-    adj_vertices, d1_weights, Yl1, l1_weights, Lbnd, Ubnd, CP_difTol, ...
-    CP_itMax, PFDR_rho, PFDR_condMin, PFDR_difRcd, PFDR_difTol, PFDR_itMax, ...
-    PFDR_verbose);
+    adj_vertices, d1_weights, Yl1, l1_weights, low_bnd, upp_bnd, ...
+    cp_dif_tol, cp_it_max, pfdr_rho, pfdr_cond_min, pfdr_dif_rcd, ...
+    pfdr_dif_tol, pfdr_it_max, pfdr_verbose);
 time = toc;
 x = rx(cv+1); % rx is components values, cv is components indices
 clear cv rx;
 fprintf('Total MEX execution time %.1f s\n\n', time);
 
-%%%  compute Dice scores  %%%
+%%%  compute Dice scores and print results  %%%
 % support retrieved with raw model
 supp = x ~= 0;
 DS = 2*sum(supp0 & supp)/(sum(supp0) + sum(supp));
