@@ -4,7 +4,7 @@
  *      cp_dif_tol = 1e-3, cp_it_max = 10, K = 2, split_iter_num = 2,
  *      kmpp_init_num = 3, kmpp_iter_num = 3, verbose = 1)
  * 
- *  Hugo Raguet 2016, 2018
+ *  Hugo 2019
  *===========================================================================*/
 #include <cstdint>
 #include "mex.h"

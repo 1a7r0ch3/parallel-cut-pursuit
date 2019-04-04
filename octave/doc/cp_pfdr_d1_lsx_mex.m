@@ -35,18 +35,20 @@ function [Comp, rX, it, Obj, Time, Dif] = cp_pfdr_d1_lsx_mex(loss, Y, ...
 %       f(x) = 1/2 ||y - x||_{l2,w}^2 ,
 %   with  ||y - x||_{l2,w}^2 = sum_{v,d} w_v (y_{v,d} - x_{v,d})^2 ;
 %
-% smoothed Kullback-Leibler divergence
-%       f(x) = sum_v w_v KLs(x_v, y_v),
-%   with KLs(y_v, x_v) = KL(s u + (1 - s) y_v ,  s u + (1 - s) x_v),
-%   where KL is the regular Kullback-Leibler divergence,
-%       u is the uniform discrete distribution over {1,...,D}, and
-%       s = loss is the smoothing parameter ;
-%   It yields, 
-%     KLs(y_v, x_v) = - sum_k (s/D + (1 - s) y_v) log(s/D + (1 - s) x_v)
-%                     - H(s u + (1 - s) y_v) ,
-%   where the constant - H(s u + (1 - s) y_v) is equal to
-%     sum_k (s/D + (1 - s) y_v) log(s/D + (1 - s) y_v)
-%
+% 0 < loss < 1 for smoothed Kullback-Leibler divergence (cross-entropy)
+%     f(x) = sum_v w_v KLs(x_v, y_v),
+% with KLs(y_v, x_v) = KL(s u + (1 - s) y_v ,  s u + (1 - s) x_v), where
+%     KL is the regular Kullback-Leibler divergence,
+%     u is the uniform discrete distribution over {1,...,D}, and
+%     s = loss is the smoothing parameter ;
+% it yields
+%     KLs(y_v, x_v) = - H(s u + (1 - s) y_v)
+%         - sum_d (s/D + (1 - s) y_{v,d}) log(s/D + (1 - s) x_{v,d}) ,
+% where H is the entropy, that is H(s u + (1 - s) y_v)
+%       = - sum_d (s/D + (1 - s) y_{v,d}) log(s/D + (1 - s) y_{v,d}) ;
+% note that the choosen order of the arguments in the Kullback-Leibler
+% does not favor the entropy of x (H(s u + (1 - s) y_v) is a constant),
+% hence this loss is actually equivalent to cross-entropy.
 % 
 % INPUTS: real numeric type is either single or double, not both;
 %         indices are C-style (start at 0) of type uint32
@@ -58,9 +60,9 @@ function [Comp, rX, it, Obj, Time, Dif] = cp_pfdr_d1_lsx_mex(loss, Y, ...
 % expected (recompilation is necessary)
 %
 % loss  - 0 for linear, 1 for quadratic, 0 < loss < 1 for smoothed
-%         Kullback-Leibler (see above)
-% Y     - observations, (real) D-by-V array, column-major format; with linear
-%         loss, should be premultiplied by the weights, if any
+%     Kullback-Leibler (see above)
+% Y - observations, (real) D-by-V array, column-major format (at each
+%     vertex, supposed to lie on the probability simplex);
 % first_edge, adj_vertices - graph forward-star representation:
 %     edges are numeroted (C-style indexing) so that all vertices originating
 %         from a same vertex are consecutive;
@@ -71,46 +73,43 @@ function [Comp, rX, it, Obj, Time, Dif] = cp_pfdr_d1_lsx_mex(loss, Y, ...
 %     for each edge, 'adj_vertices' indicates its ending vertex, array of 
 %         length E (uint32)
 % edge_weights - (real) array of length E or scalar for homogeneous weights
-% loss_weights - weights on vertices (ignored for linear loss); (real) array of
-%     length V or empty for no weights
+% loss_weights - weights on vertices; (real) array of length V or empty for
+%     no weights
 % d1_coor_weights - for multidimensional data, weights the coordinates in the
-%     l1 norms of finite differences; all weights must be strictly positive, and
+%     l1 norms of finite differences; all weights must be strictly positive,
 %     it is advised to normalize the weights so that the first value is unity
 % cp_dif_tol - stopping criterion on iterate evolution; algorithm stops if
-%              relative changes (in Euclidean norm) is less than dif_tol;
-%              1e-3 is a typical value; a lower one can give better precision
-%              but with longer computational time and more final components
-% cp_it_max  - maximum number of iterations (graph cut and subproblem)
-%              10 cuts solve accurately most problems
-% pfdr_rho   - relaxation parameter, 0 < rho < 2
-%              1 is a conservative value; 1.5 often speeds up convergence
+%     relative changes (in Euclidean norm) is less than dif_tol;
+%     1e-3 is a typical value; a lower one can give better precision
+%     but with longer computational time and more final components
+% cp_it_max - maximum number of iterations (graph cut and subproblem)
+%     10 cuts solve accurately most problems
+% pfdr_rho - relaxation parameter, 0 < rho < 2
+%     1 is a conservative value; 1.5 often speeds up convergence
 % pfdr_cond_min - stability of preconditioning; 0 < cond_min < 1;
-%                 corresponds roughly the minimum ratio to the maximum descent
-%                 metric; 1e-2 is typical; a smaller value might enhance
-%                 preconditioning
+%     corresponds roughly the minimum ratio to the maximum descent metric;
+%     1e-2 is typical; a smaller value might enhance preconditioning
 % pfdr_dif_rcd - reconditioning criterion on iterate evolution;
-%                a reconditioning is performed if relative changes of the
-%                iterate drops below dif_rcd
-%                warning: reconditioning might temporarily draw minimizer away
-%                from solution, and give bad subproblem solutions
+%     a reconditioning is performed if relative changes of the iterate drops
+%     below dif_rcd;
+%     warning: reconditioning might temporarily draw minimizer away from
+%     solution, and give bad subproblem solutions
 % pfdr_dif_tol - stopping criterion on iterate evolution; algorithm stops if
-%                relative changes (in Euclidean norm) is less than dif_tol
-%                1e-3*cp_dif_tol is a conservative value
-% pfdr_it_max  - maximum number of iterations
-%                1e4 iterations provides enough precision for most subproblems
-% verbose      - if nonzero, display information on the progress, every
-%                'verbose' PFDR iterations
-%
+%     relative changes (in Euclidean norm) is less than dif_tol
+%     1e-3*cp_dif_tol is a conservative value
+% pfdr_it_max - maximum number of iterations
+%     1e4 iterations provides enough precision for most subproblems
+% verbose - if nonzero, display information on the progress, every 'verbose'
+%     PFDR iterations
 %
 % OUTPUTS: indices are C-style (start at 0)
 %
 % Comp - assignement of each vertex to a component, array of length V (uint16)
-% rX   - values of eachcomponents of the minimizer, array of length rV (real);
+% rX   - values of each component of the minimizer, array of length rV (real);
 %        the actual minimizer is then reconstructed as X = rX(Comp + 1);
 % it   - actual number of cut-pursuit iterations performed
 % Obj  - the values of the objective functional along iterations (array of
-%        length it + 1); in the precomputed A^t A version, a constant
-%        1/2||Y||^2 in the quadratic part is omited
+%        length it + 1)
 % Time - if requested, the elapsed time along iterations (array of length
 %        cp_it + 1)
 % Dif  - if requested, the iterate evolution along iterations
@@ -125,4 +124,4 @@ function [Comp, rX, it, Obj, Time, Dif] = cp_pfdr_d1_lsx_mex(loss, Y, ...
 % H. Raguet, A Note on the Forward-Douglas--Rachford Splitting for Monotone 
 % Inclusion and Convex Optimization Optimization Letters, 2018, 1-24
 %
-% Hugo Raguet 2017, 2018
+% Hugo Raguet 2017, 2018, 2019

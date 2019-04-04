@@ -7,6 +7,7 @@
 %
 % Hugo Raguet 2017, 2018
 cd(fileparts(which('example_tomography.m')));
+addpath(genpath('./bin/'));
 
 %%%  general parameters  %%%
 printResults = true; % requires color encapsulated postscript driver on your
@@ -46,7 +47,7 @@ figure(1), clf, colormap('gray');
 imagesc(x0); axis image; set(gca, 'Xtick', [], 'Ytick', []);
 title('ground truth');
 if printResults
-    fprintf('print ground truth... ')
+    fprintf('print ground truth... ');
     print(gcf, '-depsc', 'tomography_ground_truth');
     fprintf('done.\n');
 end
@@ -55,7 +56,7 @@ figure(2), clf, colormap('gray');
 imagesc(reshape(x, size(x0))); axis image; set(gca, 'Xtick', [], 'Ytick', []);
 title('reconstruction');
 if printResults
-    fprintf('print reconstruction... ')
+    fprintf('print reconstruction... ');
     print(gcf, '-depsc', 'tomography_reconstruction');
     fprintf('done.\n');
 end

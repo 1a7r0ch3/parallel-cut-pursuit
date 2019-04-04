@@ -1,6 +1,6 @@
 /*=============================================================================
  * Derived class for cut-pursuit algorithm with d0 (weighted contour length) 
- * penalization, with a loss akin to a distance :
+ * penalization, with a loss akin to a distance:
  *
  * minimize functional over a graph G = (V, E)
  *
@@ -79,7 +79,7 @@ private:
      *                            = sum_{v in V} w_v sum_d m_d (x_vd - y_vd)^2.
      *
      * 0 < loss < 1 for (smoothed, weighted) Kullback-Leibler divergence
-     * (cross-entropy)
+     * (cross-entropy) on the probability simplex
      *     f(x) = sum_v w_v KLs_m(x_v, y_v),
      * with KLs(y_v, x_v) = KL_m(s u + (1 - s) y_v ,  s u + (1 - s) x_v), where
      *     KL is the regular Kullback-Leibler divergence,
@@ -87,10 +87,8 @@ private:
      *     s = loss is the smoothing parameter
      *     m is a diagonal metric weighting the coordinates;
      * it yields
-     *
      *     KLs_m(y_v, x_v) = - H_m(s u + (1 - s) y_v)
      *         - sum_d m_d (s/D + (1 - s) y_{v,d}) log(s/D + (1 - s) x_{v,d}) ,
-     *
      * where H_m is the (weighted) entropy, that is H_m(s u + (1 - s) y_v)
      *       = - sum_d m_d (s/D + (1 - s) y_{v,d}) log(s/D + (1 - s) y_{v,d}) ;
      * note that the choosen order of the arguments in the Kullback--Leibler
