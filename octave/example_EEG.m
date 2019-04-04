@@ -64,7 +64,7 @@ set(gca, 'Color', 'none'); axis off;
 set(gca, 'CameraPosition', CAM);
 drawnow('expose');
 if printResults
-    fprintf('print ground truth... ')
+    fprintf('print ground truth... ');
     print(gcf, '-depsc', 'EEG_ground_truth');
     fprintf('done.\n');
 end

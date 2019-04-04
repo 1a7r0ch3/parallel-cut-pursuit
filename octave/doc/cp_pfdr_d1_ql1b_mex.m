@@ -120,4 +120,4 @@ function [Comp, rX, it, Obj, Time, Dif] = cp_pfdr_d1_ql1b_mex(Y, A, ...
 % H. Raguet, A Note on the Forward-Douglas--Rachford Splitting for Monotone 
 % Inclusion and Convex Optimization Optimization Letters, 2018, 1-24
 %
-% Hugo Raguet 2017, 2018
+% Hugo Raguet 2017, 2018, 2019
