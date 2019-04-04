@@ -1,11 +1,18 @@
   %-------------------------------------------------------------------------%
   %  script for illustrating cp_kmpp_d0_dist on labeling of 3D point cloud  %
   %-------------------------------------------------------------------------%
-% Reference: TODO
+% References:
+% L. Landrieu and G. Obozinski, Cut Pursuit: fast algorithms to learn
+% piecewise constant functions on general weighted graphs, SIAM Journal on
+% Imaging Science, 10(4):1724-1766, 2017
+%
+% L. Landrieu et al., A structured regularization framework for spatially
+% smoothing semantic labelings of 3D point clouds, ISPRS Journal of
+% Photogrammetry and Remote Sensing, 132:102-118, 2017
 %
 % Hugo Raguet 2019
 cd(fileparts(which('example_labeling_3D.m')));
-addpath(genpath('./bin/'));
+addpath(genpath('../bin/'));
 
 %%%  classes involved in the task  %%%
 classNames = {'road', 'vegetation', 'facade', 'hardscape', 'scanning artifacts', 'cars'};
