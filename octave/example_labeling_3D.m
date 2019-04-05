@@ -5,23 +5,24 @@
 % Nonsmooth Functionals with Graph Total Variation, International Conference on
 % Machine Learning, PMLR, 2018, 80, 4244-4253
 %
-% Hugo Raguet 2017, 2018
+% Hugo Raguet 2017, 2018, 2019
 cd(fileparts(which('example_labeling_3D.m')));
 addpath(genpath('./bin/'));
 
 %%%  classes involved in the task  %%%
-classNames = {'road', 'vegetation', 'facade', 'hardscape', 'scanning artifacts', 'cars'};
+classNames = {'road', 'vegetation', 'facade', 'hardscape', ...
+    'scanning artifacts', 'cars'};
 classId = uint8(1:6)';
 
 %%%  parameters; see octave/doc/cp_pfdr_d1_lsx_mex.m  %%%
-CP_difTol = 1e-3;
-CP_itMax = 10;
-PFDR_rho = 1.5;
-PFDR_condMin = 1e-2;
-PFDR_difRcd = 0;
-PFDR_difTol = 1e-3*CP_difTol;
-PFDR_itMax = 1e4;
-PFDR_verbose = 1e2;
+cp_dif_tol = 1e-3;
+cp_it_max = 10;
+pfdr_rho = 1.5;
+pfdr_cond_min = 1e-2;
+pfdr_dif_rcd = 0;
+pfdr_dif_tol = 1e-3*cp_dif_tol;
+pfdr_it_max = 1e4;
+pfdr_verbose = 1e2;
 
 %%%  initialize data  %%%
 % For details on the data and parameters, see H. Raguet, A Note on the
@@ -43,14 +44,14 @@ clear predk truek
 %%%  solve the optimization problem  %%%
 tic;
 loss_weights = []; d1_coor_weights = [];
-[cv, rx] = cp_pfdr_d1_lsx_mex(loss, y, first_edge, ...
+[Comp, rX] = cp_pfdr_d1_lsx_mex(loss, y, first_edge, ...
     adj_vertices, homo_d1_weight, loss_weights, d1_coor_weights, ...
-    CP_difTol, CP_itMax, PFDR_rho, PFDR_condMin, PFDR_difRcd, ...
-    PFDR_difTol, PFDR_itMax, PFDR_verbose);
+    cp_dif_tol, cp_it_max, pfdr_rho, pfdr_cond_min, pfdr_dif_rcd, ...
+    pfdr_dif_tol, pfdr_it_max, pfdr_verbose);
 time = toc;
-x = rx(:, cv+1); % rx is components values, cv is components indices
-clear cv rx;
-fprintf('Total MEX execution time %.0f s\n\n', time);
+x = rX(:, Comp+1); % rX is components values, Comp is components assignments
+clear Comp rX;
+fprintf('Total python  wraaper execution time %.0f s\n\n', time);
 
 % compute prediction performance of spatially regularized prediction
 [~, ML] = max(x, [], 1);
@@ -60,5 +61,6 @@ for k=1:length(classId)
     truek = ground_truth == classId(k);
     F1(k) = 2*sum(predk & truek)/(sum(predk) + sum(truek));
 end
-fprintf('\naverage F1 of spatially regularized prediction: %.2f\n\n', mean(F1));
+fprintf('\naverage F1 of spatially regularized prediction: %.2f\n\n', ...
+    mean(F1));
 clear predk truek

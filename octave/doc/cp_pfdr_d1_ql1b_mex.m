@@ -1,4 +1,4 @@
-function [Comp, rX, it, Obj, Time, Dif] = cp_pfdr_d1_ql1b_mex(Y, A, ...
+function [Comp, rX, cp_it, Obj, Time, Dif] = cp_pfdr_d1_ql1b_mex(Y, A, ...
     first_edge, adj_vertices, edge_weights, Yl1, l1_weights, low_bnd, ...
     upp_bnd, cp_dif_tol, cp_it_max, pfdr_rho, pfdr_cond_min, pfdr_dif_rcd, ...
     pfdr_dif_tol, pfdr_it_max, verbose, AtA_if_square)
@@ -102,9 +102,9 @@ function [Comp, rX, it, Obj, Time, Dif] = cp_pfdr_d1_ql1b_mex(Y, A, ...
 % Comp - assignement of each vertex to a component, array of length V (uint16)
 % rX   - values of eachcomponents of the minimizer, array of length rV (real);
 %        the actual minimizer is then reconstructed as X = rX(Comp + 1);
-% it   - actual number of cut-pursuit iterations performed
+% cp_it - actual number of cut-pursuit iterations performed
 % Obj  - the values of the objective functional along iterations (array of
-%        length it + 1) in the precomputed A^t A version, a constant
+%        length cp_it + 1) in the precomputed A^t A version, a constant
 %        1/2||Y||^2 in the quadratic part is omited
 % Time - if requested, the elapsed time along iterations
 %        (array of length cp_it + 1)

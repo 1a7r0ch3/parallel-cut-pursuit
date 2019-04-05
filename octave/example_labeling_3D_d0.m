@@ -11,11 +11,12 @@
 % Photogrammetry and Remote Sensing, 132:102-118, 2017
 %
 % Hugo Raguet 2019
-cd(fileparts(which('example_labeling_3D.m')));
-addpath(genpath('../bin/'));
+cd(fileparts(which('example_labeling_3D_d0.m')));
+addpath(genpath('./bin/'));
 
 %%%  classes involved in the task  %%%
-classNames = {'road', 'vegetation', 'facade', 'hardscape', 'scanning artifacts', 'cars'};
+classNames = {'road', 'vegetation', 'facade', 'hardscape', ...
+    'scanning artifacts', 'cars'};
 classId = uint8(1:6)';
 
 %%%  parameters; see octave/doc/cp_pfdr_d1_lsx_mex.m  %%%
@@ -48,12 +49,12 @@ clear predk truek
 %%%  solve the optimization problem  %%%
 tic;
 vert_weights = []; coor_weights = [];
-[cv, rx] = cp_kmpp_d0_dist_mex(loss, y, first_edge, adj_vertices, ...
+[Comp, rX] = cp_kmpp_d0_dist_mex(loss, y, first_edge, adj_vertices, ...
     homo_d0_weight, vert_weights, coor_weights, cp_dif_tol, cp_it_max, ...
     K, split_iter_num, kmpp_init_num, kmpp_iter_num, verbose);
 time = toc;
-x = rx(:, cv+1); % rx is components values, cv is components indices
-clear cv rx;
+x = rX(:, Comp+1); % rX is components values, Comp is components assignments
+clear Comp rX;
 fprintf('Total MEX execution time %.0f s\n\n', time);
 
 % compute prediction performance of spatially regularized prediction
@@ -64,5 +65,6 @@ for k=1:length(classId)
     truek = ground_truth == classId(k);
     F1(k) = 2*sum(predk & truek)/(sum(predk) + sum(truek));
 end
-fprintf('\naverage F1 of spatially regularized prediction: %.2f\n\n', mean(F1));
+fprintf('\naverage F1 of spatially regularized prediction: %.2f\n\n', ...
+    mean(F1));
 clear predk truek
