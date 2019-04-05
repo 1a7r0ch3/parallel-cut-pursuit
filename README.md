@@ -12,7 +12,7 @@ Extension modules for Python.
 2. [**Generic C++ classes**](#generic-classes)  
 3. [**Specialization for quadratic functional and graph total variation**](#specialization-Cp_d1_ql1b-quadratic-functional-ℓ1-norm-bounds-and-graph-total-variation)  
 4. [**Specialization for separable multidimensional loss and graph total variation**](#specialization-Cp_d1_lsx-separable-loss-simplex-constraints-and-graph-total-variation)  
-5. [**Specialization for separable distance and contour length**](#specialization-Cp_d1_lsx-separable-loss-simplex-constraints-and-graph-total-variation)
+5. [**Specialization for separable distance and contour length**](#specialization-Cp_d0_dist-separable-distance-and-weighted-contour-length)
 6. [**Directory tree**](#directory-tree)
 7. [**C++ documentation**](#directory-tree)
 8. [**GNU Octave or Matlab**](#gnu-octave-or-matlab)
@@ -101,16 +101,17 @@ The base space is ℍ = ℝ<sup>_D_</sup>, where _D_ can be seen as a set of lab
 
     _F_: _x_ ∈ ℝ<sup>_V_ ⨯ _D_</sup> ↦  _f_(_y_, _x_) +
  ∑<sub>_v_ ∈ _V_</sub> _ι_<sub>Δ<sub>_D_</sub></sub>(_x_<sub>_v_</sub>) +
- ∑<sub>(_u_,_v_) ∈ _E_</sub> _w_<sup>(d<sub>0</sub>)</sup><sub>(_u_,_v_)</sub>
+ ∑<sub>(_u_,_v_) ∈ _E_</sub> _w_<sup>(d<sub>1</sub>)</sup><sub>(_u_,_v_)</sub>
  ∑<sub>_d_ ∈ _D_</sub> _λ_<sub>_d_</sub> |_x_<sub>_u_,_d_</sub> − _x_<sub>_v_,_d_</sub>| ,  
 
-where _y_ ∈ ℝ<sup>_V_ ⨯ _D_</sup>, _f_ is a loss functional (see below), _w_<sup>(d<sub>0</sub>)</sup> ∈ ℝ<sup>_E_</sup> and _λ_ ∈ ℝ<sup>_D_</sup> are regularization weights, and _ι_<sub>Δ<sub>_D_</sub></sub> is the convex indicator of the simplex
+where _y_ ∈ ℝ<sup>_V_ ⨯ _D_</sup>, _f_ is a loss functional (see below), _w_<sup>(d<sub>1</sub>)</sup> ∈ ℝ<sup>_E_</sup> and _λ_ ∈ ℝ<sup>_D_</sup> are regularization weights, and _ι_<sub>Δ<sub>_D_</sub></sub> is the convex indicator of the simplex
 Δ<sub>_D_</sub> = {_x_ ∈ ℝ<sup>_D_</sup> | ∑<sub>_d_</sub> _x_<sub>_d_</sub> = 1 and ∀ _d_, _x_<sub>_d_</sub> ≥ 0}: _x_ ↦ 0 if _x_ ∈ Δ<sub>_D_</sub>, +∞ otherwise. 
 
 The following loss functionals are available, where _w_<sup>(_f_)</sup> ∈ ℝ<sup>_V_</sup> are weights on vertices.  
 Linear: _f_(_y_, _x_) = − ∑<sub>_v_ ∈ _V_</sub> _w_<sup>(_f_)</sup><sub>_v_</sub> ∑<sub>_d_ ∈ _D_</sub> _x_<sub>_v_,_d_</sub> _y_<sub>_v_,_d_</sub>  
 Quadratic: _f_(_y_, _x_) = ∑<sub>_v_ ∈ _V_</sub> _w_<sup>(_f_)</sup><sub>_v_</sub> ∑<sub>_d_ ∈ _D_</sub> (_x_<sub>_v_,_d_</sub> − _y_<sub>_v_,_d_</sub>)<sup>2</sup>  
-Smoothed Kullback–Leibler divergence (equivalent to cross-entropy): _f_(_y_, _x_) = ∑<sub>_v_ ∈ _V_</sub> _w_<sup>(_f_)</sup><sub>_v_</sub>
+Smoothed Kullback–Leibler divergence (equivalent to cross-entropy):  
+_f_(_y_, _x_) = ∑<sub>_v_ ∈ _V_</sub> _w_<sup>(_f_)</sup><sub>_v_</sub>
 KL(_α_ _u_ + (1 − _α_) _y_<sub>_v_</sub>, _α_ _u_ + (1 − _α_) _x_<sub>_v_</sub>),  
 where _α_ ∈ \]0,1\[,
 _u_ ∈ Δ<sub>_D_</sub> is the uniform discrete distribution over _D_,
@@ -144,21 +145,21 @@ The base space is ℍ = ℝ<sup>_D_</sup> or Δ<sub>_D_</sub> and the general fo
 
     _F_: _x_ ∈ ℝ<sup>_V_ ⨯ _D_</sup> ↦  _f_(_y_, _x_) +
  ∑<sub>(_u_,_v_) ∈ _E_</sub> _w_<sup>(d<sub>0</sub>)</sup><sub>(_u_,_v_)</sub>
-    ║_x_<sub>_u_</sub> − _x_<sub>_v_</sub>║<sub>0</sub> ,  
+    ║<i>x</i><sub>_u_</sub> − _x_<sub>_v_</sub>║<sub>0</sub> ,  
 
-where _y_ ∈ ℍ<sup>_D_</sup>, _f_ is a loss functional akin to a distance (see below), and 
+where _y_ ∈ ℍ<sup>_V_</sup>, _f_ is a loss functional akin to a distance (see below), and 
 ║&middot;║<sub>0</sub> is the ℓ<sub>0</sub> pseudo-norm _x_ ↦ 0 if _x_ = 0, 1 otherwise.  
 
 The following loss functionals are available, where _w_<sup>(_f_)</sup> ∈ ℝ<sup>_V_</sup> are weights on vertices and _m_<sup>(_f_)</sup> ∈ ℝ<sup>_D_</sup> are weights on coordinates.  
-Weighted quadratic: ℍ = ℝ<sup>_D_</sup> and
+Weighted quadratic: ℍ = ℝ<sup>_D_</sup> and 
 _f_(_y_, _x_) = ∑<sub>_v_ ∈ _V_</sub> _w_<sup>(_f_)</sup><sub>_v_</sub> ∑<sub>_d_ ∈ _D_</sub> _m_<sup>(_f_)</sup><sub>_d_</sub> (_x_<sub>_v_,_d_</sub> − _y_<sub>_v_,_d_</sub>)<sup>2</sup>  
 Weighted smoothed Kullback–Leibler divergence (equivalent to cross-entropy):
-ℍ = Δ<sup>_D_</sup> and
+ℍ = Δ<sup>_D_</sup> and  
 _f_(_y_, _x_) = ∑<sub>_v_ ∈ _V_</sub> _w_<sup>(_f_)</sup><sub>_v_</sub>
 KL<sub>_m_<sup>(_f_)</sup></sub>(_α_ _u_ + (1 − _α_) _y_<sub>_v_</sub>, _α_ _u_ + (1 − _α_) _x_<sub>_v_</sub>),  
 where _α_ ∈ \]0,1\[,
 _u_ ∈ Δ<sub>_D_</sub> is the uniform discrete distribution over _D_,
-and
+and  
 KL<sub>_m_<sup>(_f_)</sup></sub>: (_p_, _q_) ↦ ∑<sub>_d_ ∈ _D_</sub> _m_<sup>(_f_)</sup><sub>_d_</sub> _p_<sub>_d_</sub> log(_p_<sub>_d_</sub>/_q_<sub>_d_</sub>).   
 
 The reduced problem amounts to averaging, and the split step uses _k_-means++ algorithm.  
@@ -191,7 +192,7 @@ The script `example_EEG.m` exemplifies the use of [`Cp_d1_ql1b`](#specialization
 
 The script `example_tomography.m` exemplifies the use of [`Cp_d1_ql1b`](#specialization-Cp_d1_ql1b-quadratic-functional-ℓ1-norm-bounds-and-graph-total-variation), on a task of _image reconstruction from tomography_.   
 
-The script `example_labeling_3D.m` and `example_labeling_3D_d0.m` exemplify the use of, respectively, [`Cp_d1_lsx`](#specialization-Cp_d1_lsx-separable-loss-simplex-constraints-and-graph-total-variation) and [`Cp_d0_dist`](#specialization-Cp_d0_dist-separable-distance-and-weighted-contour-length), on a task of _spatial regularization of semantic classification of a 3D point cloud_.  
+The scripts `example_labeling_3D.m` and `example_labeling_3D_d0.m` exemplify the use of, respectively, [`Cp_d1_lsx`](#specialization-Cp_d1_lsx-separable-loss-simplex-constraints-and-graph-total-variation) and [`Cp_d0_dist`](#specialization-Cp_d0_dist-separable-distance-and-weighted-contour-length), on a task of _spatial regularization of semantic classification of a 3D point cloud_.  
 
 ### Python
 The python interfaces are documented within corresponding `.py` files in `python/wrappers/`.  
