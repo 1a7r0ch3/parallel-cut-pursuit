@@ -64,10 +64,6 @@ public:
 private:
     /**  separable loss term  **/
 
-    /* observations, D-by-V array, column major format;
-     * must lie on the simplex */
-    const real_t* Y; 
-
     /* 0 for linear (macro LINEAR)
      *     f(x) = - <x, y>_w ,
      * with <x, y>_w = sum_{v,d} w_v y_{v,d} x_{v,d} ;
@@ -94,6 +90,10 @@ private:
      * does not favor the entropy of x (H(s u + (1 - s) y_v) is a constant),
      * hence this loss is actually equivalent to cross-entropy */
     real_t loss;
+
+    /* observations, D-by-V array, column major format;
+     * must lie on the simplex */
+    const real_t* Y; 
 
     /* weights on vertices; array of length V, or null for no weights */
     const real_t *loss_weights;

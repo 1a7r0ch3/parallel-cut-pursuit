@@ -144,17 +144,18 @@ private:
 
     /**  graph total variation  **/
 
+    /* see public enum declaration; must be initialized before d1shape */
+    const D1p d1p;
+
     /* if 'edge_weights' is not null, array of length E;
      * otherwise homogeneously equal to 'homo_edge_weight' */
-    const real_t *edge_weights;
+    const real_t* edge_weights;
     real_t homo_edge_weight;
+
     /* for multidimensional data, weights the coordinates in the lp norms;
      * all weights must be strictly positive, and it is advised to normalize
      * the weights so that the first value is unity */
-    const real_t *coor_weights;
-
-    /* see public enum declaration; must be initialized before d1shape */
-    const D1p d1p;
+    const real_t* coor_weights;
 
     real_t *W_d1, *Th_d1; // weights and thresholds for d1 proximal operator
     real_t w_d1, th_d1;

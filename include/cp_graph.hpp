@@ -149,22 +149,22 @@ private:
     arc* const terminal;
     arc* const orphan;
 
-    /* node_last = nodes+node_num, node_max = nodes+node_num_max */
+    /* node_last = nodes + node_num, node_max = nodes + node_num_max */
 	node *node_last, *node_max;
-    /* arc_last = arcs+2*edge_num, arc_max = arcs+2*edge_num_max */
+    /* arc_last = arcs + 2*edge_num, arc_max = arcs + 2*edge_num_max */
 	arc *arc_last, *arc_max;
 
-	index_t node_num = 0;
+	index_t node_num;
 
 	struct nodeptr
 	{
 		node* ptr;
 		nodeptr* next;
 	};
-	static const int NODEPTR_BLOCK_SIZE = 128;
 
+	static const int NODEPTR_BLOCK_SIZE;
 
-	DBlock<nodeptr> *nodeptr_block;
+	DBlock<nodeptr>* nodeptr_block;
 
 	// real_t flow; // total flow; not used for cut-pursuit
 

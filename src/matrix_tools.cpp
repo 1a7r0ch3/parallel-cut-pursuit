@@ -59,11 +59,10 @@ void normalize_and_apply_matrix(const real_t* A, real_t* X, real_t* AX,
 }
 
 template <typename real_t>
-real_t operator_norm_matrix(size_t M, size_t N, const real_t* A, const real_t* D,
-    real_t tol, int it_max, int nb_init, bool verbose)
+real_t operator_norm_matrix(size_t M, size_t N, const real_t* A,
+    const real_t* D, real_t tol, int it_max, int nb_init, bool verbose)
 {
-    real_t *X, *AX, *AA;
-    X = AX = AA = nullptr;
+    real_t* AA = nullptr;
     bool sym = false;
 
     /**  preprocessing  **/
@@ -93,9 +92,13 @@ real_t operator_norm_matrix(size_t M, size_t N, const real_t* A, const real_t* D
                 for (size_t n = 0; n < N; n++){
                     if (D){
                         ApnDn2 = (*Ap)*D[n]*D[n];
-                        for (size_t m = 0; m <= p; m++){ AAp[m] += ApnDn2*An[m]; }
+                        for (size_t m = 0; m <= p; m++){
+                            AAp[m] += ApnDn2*An[m];
+                        }
                     }else{
-                        for (size_t m = 0; m <= p; m++){ AAp[m] += (*Ap)*An[m]; }
+                        for (size_t m = 0; m <= p; m++){
+                            AAp[m] += (*Ap)*An[m];
+                        }
                     }
                     An += M;
                     Ap += M;

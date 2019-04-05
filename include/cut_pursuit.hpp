@@ -120,10 +120,6 @@ public:
     int cut_pursuit(bool init = true);
 
 protected:
-    const size_t D; // dimension of the data; total size is V*D
-    value_t *rX, *last_rX; // reduced iterate (values of the components)
-    comp_t saturation_count; // number of saturated components
-
     /**  main graph  **/
 
     const index_t V, E; // number of vertices, of edges
@@ -137,6 +133,12 @@ protected:
     const index_t *first_edge, *adj_vertices; 
     const real_t *edge_weights;
     real_t homo_edge_weight;
+
+    const size_t D; // dimension of the data; total size is V*D
+    value_t *rX, *last_rX; // reduced iterate (values of the components)
+    comp_t saturation_count; // number of saturated components
+
+
 
     /**  reduced graph  **/
 

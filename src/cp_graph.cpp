@@ -18,8 +18,8 @@
 using namespace std;
 
 TPL CP_GRAPH::Cp_graph(index_t node_num_max, index_t edge_num_max)
-    : node_num(0), nodeptr_block(nullptr), terminal(&reserved_terminal_arc),
-    orphan(&reserved_orphan_arc), is_parallel_copy(false)
+    : terminal(&reserved_terminal_arc), orphan(&reserved_orphan_arc),
+    node_num(0), nodeptr_block(nullptr), is_parallel_copy(false)
 {
     if (node_num_max < 16) node_num_max = 16;
     if (edge_num_max < 16) edge_num_max = 16;
@@ -42,7 +42,7 @@ TPL CP_GRAPH::Cp_graph(index_t node_num_max, index_t edge_num_max)
 }
 
 TPL CP_GRAPH::Cp_graph(const CP_GRAPH & G) : nodes(G.nodes), arcs(G.arcs),
-    node_num(G.node_num), terminal(G.terminal), orphan(G.orphan),
+    terminal(G.terminal), orphan(G.orphan), node_num(G.node_num),
     nodeptr_block(nullptr), is_parallel_copy(true){}
 
 TPL CP_GRAPH::~Cp_graph()
@@ -57,6 +57,8 @@ TPL CP_GRAPH::~Cp_graph()
         free(arcs);
     }
 }
+
+TPL const int CP_GRAPH::NODEPTR_BLOCK_SIZE = 128;
 
 /***********************************************************************/
 
