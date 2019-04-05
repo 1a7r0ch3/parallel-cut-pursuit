@@ -237,29 +237,33 @@ static PyObject* py_C_API_function(PyObject * self, PyObject * args)
     }
 }
 
-static PyMethodDef cp_pfdr_d1_ql1b_py_C_API_methods[] = {
+static PyMethodDef cp_pfdr_d1_ql1b_py_methods[] = {
     {"py_C_API_function", py_C_API_function, METH_VARARGS,
-        "wrapper for parallel cut pursuit"},
+        "wrapper for parallel cut-pursuit quadratic d1 l1 bounds"},
     {NULL, NULL, 0, NULL}
 };
 
 #if PY_MAJOR_VERSION >= 3
 /* module initialization */
 /* Python version 3 */
-static struct PyModuleDef cp_pfdr_d1_ql1b_py_C_API_module = {
+static struct PyModuleDef cp_pfdr_d1_ql1b_py_module = {
     PyModuleDef_HEAD_INIT,
-    "cp_pfdr_d1_ql1b_py_C_API",   /* name of module */
+    "cp_pfdr_d1_ql1b_py", /* name of module */
     NULL, /* module documentation, may be NULL */
-    -1,       /* size of per-interpreter state of the module,
-                 or -1 if the module keeps state in global variables. */
-    cp_pfdr_d1_ql1b_py_C_API_methods
+    -1,   /* size of per-interpreter state of the module,
+             or -1 if the module keeps state in global variables. */
+    cp_pfdr_d1_ql1b_py_methods,
+    NULL, /* multi-phase initialization, may be null */
+    NULL, /* traversal function, may be null */
+    NULL, /* clearing function, may be null */
+    NULL  /* freeing function, may be null */
 };
 
 PyMODINIT_FUNC
-PyInit_cp_pfdr_d1_ql1b_py_C_API(void)
+PyInit_cp_pfdr_d1_ql1b_py(void)
 {
     import_array() /* IMPORTANT: this must be called to use numpy array */
-    return PyModule_Create(&cp_pfdr_d1_ql1b_py_C_API_module);
+    return PyModule_Create(&cp_pfdr_d1_ql1b_py_module);
 }
 
 #else
@@ -267,10 +271,9 @@ PyInit_cp_pfdr_d1_ql1b_py_C_API(void)
 /* module initialization */
 /* Python version 2 */
 PyMODINIT_FUNC
-initcp_pfdr_d1_ql1b_py_C_API_module(void)
+initcp_pfdr_d1_ql1b_py_module(void)
 {
-    (void) Py_InitModule("cp_pfdr_d1_ql1b_py_C_API",
-        cp_pfdr_d1_ql1b_py_C_API_methods);
+    (void) Py_InitModule("cp_pfdr_d1_ql1b_py", cp_pfdr_d1_ql1b_py_methods);
     import_array() /* IMPORTANT: this must be called to use numpy array */
 }
 

@@ -40,11 +40,11 @@ mod = Extension(
          "../src/cp_graph.cpp", "../src/pfdr_d1_lsx.cpp",
          "../src/proj_simplex.cpp", "../src/pfdr_graph_d1.cpp",
          "../src/pcd_fwd_doug_rach.cpp", "../src/pcd_prox_split.cpp"], 
-        # Make sure to include the Numpy headers (not always necessary) 
-        # TODO: check if necessary, because final libraries are HUGE
+        # Make sure to include the Numpy headers
         include_dirs = [numpy.get_include()],
         # compilation and linkage options
-        extra_compile_args = ["-fopenmp"],
+        extra_compile_args = ["-Wextra", "-Wpedantic", "-std=c++11",
+                "-fopenmp"],
         extra_link_args= ['-lgomp']
     )
 setup(name=name, ext_modules=[mod])
@@ -59,11 +59,11 @@ mod = Extension(
          "../src/cp_graph.cpp", "../src/pfdr_d1_ql1b.cpp",
          "../src/matrix_tools.cpp", "../src/pfdr_graph_d1.cpp", 
          "../src/pcd_fwd_doug_rach.cpp", "../src/pcd_prox_split.cpp"],
-        # Make sure to include the Numpy headers (not always necessary) 
-        # TODO: check if necessary, because final libraries are HUGE
+        # Make sure to include the Numpy headers
         include_dirs = [numpy.get_include()],
         # compilation and linkage options
-        extra_compile_args = ["-fopenmp"],
+        extra_compile_args = ["-Wextra", "-Wpedantic", "-std=c++11",
+                "-fopenmp"],
         extra_link_args= ['-lgomp']
     )
 setup(name=name, ext_modules=[mod])
