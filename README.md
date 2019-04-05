@@ -70,7 +70,7 @@ _ι_<sub>[_a_,_b_]</sub> is the convex indicator of [_a_, _b_] : x ↦ 0 if _x_ 
 
 When _y_<sup>(ℓ<sub>1</sub>)</sup> is zero, the combination of ℓ<sub>1</sub> norm and total variation is sometimes coined _fused LASSO_.  
 
-When _A_ is the identity, _λ_ is zero and there are no box constraints, the problem boild down to the _proximity operator_ of the graph total variation, also coined “graph total variation denoising” or “general fused LASSO signal approximation”.  
+When _A_ is the identity, _λ_ is zero and there are no box constraints, the problem boils down to the _proximity operator_ of the graph total variation, also coined “graph total variation denoising” or “general fused LASSO signal approximation”.  
 
 Currently, _A_ must be provided as a matrix. See the documentation for special cases.  
 
@@ -182,11 +182,12 @@ An example with the smoothed Kullback–Leibler is provided with [GNU Octave or 
 
 
 ### C++ documentation
+Requires `C++11`.  
 The C++ classes are documented within the corresponding headers in `include/`.  
 
 ### GNU Octave or Matlab
-The MEX interfaces are documented within dedicated `.m` files in `octave/doc/`.  
 See the script `compile_mex.m` for typical compilation commands.  
+The MEX interfaces are documented within dedicated `.m` files in `octave/doc/`.  
 
 The script `example_EEG.m` exemplifies the use of [`Cp_d1_ql1b`](#specialization-Cp_d1_ql1b-quadratic-functional-ℓ1-norm-bounds-and-graph-total-variation), on a task of _brain source identification from electroencephalography_.  
 
@@ -195,12 +196,13 @@ The script `example_tomography.m` exemplifies the use of [`Cp_d1_ql1b`](#special
 The scripts `example_labeling_3D.m` and `example_labeling_3D_d0.m` exemplify the use of, respectively, [`Cp_d1_lsx`](#specialization-Cp_d1_lsx-separable-loss-simplex-constraints-and-graph-total-variation) and [`Cp_d0_dist`](#specialization-Cp_d0_dist-separable-distance-and-weighted-contour-length), on a task of _spatial regularization of semantic classification of a 3D point cloud_.  
 
 ### Python
-The python interfaces are documented within corresponding `.py` files in `python/wrappers/`.  
 Requires `numpy` package.  
 See the script `setup.py` for compiling modules with `distutils`;
-currently, wrappers assume the libraries are built in a `python/bin/` directory, which can be ensured using `python setup.py build_ext --build-lib='bin'`.  
+currently, the wrappers assume the libraries are built in a `python/bin/` directory, which can be ensured using `python setup.py build_ext --build-lib='bin'`.  
 
-The script `example_EEG.py` exemplifies the use of [`Cp_d1_ql1b`](#specialization-Cp_d1_ql1b-quadratic-functional-ℓ1-norm-bounds-and-graph-total-variation), on a task of _brain source identification with electroencephalography_.  
+The python interfaces are documented within corresponding `.py` files in `python/wrappers/`.  
+
+The script `example_EEG.py` exemplifies the use of [`Cp_d1_ql1b`](#specialization-Cp_d1_ql1b-quadratic-functional-ℓ1-norm-bounds-and-graph-total-variation), on a task of _brain source identification from electroencephalography_.  
 
 The script `example_labeling_3D.py` exemplifies the use of [`Cp_d1_lsx`](#specialization-Cp_d1_lsx-separable-loss-simplex-constraints-and-graph-total-variation), on a task of _spatial regularization of semantic classification of a 3D point cloud_.  
 

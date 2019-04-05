@@ -201,6 +201,7 @@ TPL void PFDR_D1::preconditioning(bool init)
         size_t vd = v*Dga;
         size_t ed = e*Dd1;
         size_t id, jd;
+        id = jd = 0; // avoid uninitialization warning
         if (wd1shape != SCALAR){
             id = i*Dd1;
             jd = j*Dd1;
@@ -228,8 +229,9 @@ TPL void PFDR_D1::compute_prox_GaW_g()
         size_t vd = edges[j]*D;
         size_t id = i*D;
         size_t jd = j*D;
-        size_t ed;
+        size_t ed = 0; // avoid uninitialization warning
         real_t thresholding, dnorm;
+        thresholding = ZERO; // avoid uninitialization warning
         if (d1p == D12){ /* compute norm and threshold */
             dnorm = ZERO;
             for (size_t d = 0; d < D; d++){ 

@@ -52,7 +52,7 @@ public:
      * getting the corresponding pointer member and setting it to null
      * beforehand */
 
-    void set_split_param(int K = 2, int split_iter_num = 2);
+    void set_split_param(comp_t K = 2, int split_iter_num = 2);
 
 protected:
     /* compute the functional f at a single vertex */

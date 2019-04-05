@@ -130,6 +130,7 @@ TPL void PFDR_D1_QL1B::compute_lipschitz_metric()
     }else{
         Lmut = (real_t*) malloc_check(V*sizeof(real_t));
         switch (lipsch_equi){
+        case NOEQUI: break; // not possible
         case JACOBI:
             symmetric_equilibration_jacobi<real_t>(N, V, A, Lmut); break;
         case BUNCH:

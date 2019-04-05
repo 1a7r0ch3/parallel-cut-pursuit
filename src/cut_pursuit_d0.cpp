@@ -26,7 +26,7 @@ TPL CP_D0::Cp_d0(index_t V, index_t E, const index_t* first_edge,
     split_iter_num = 2;
 }
 
-TPL void CP_D0::set_split_param(int K, int split_iter_num)
+TPL void CP_D0::set_split_param(comp_t K, int split_iter_num)
 {
     if (split_iter_num < 1){
         cerr << "Cut-pursuit d0: there must be at least one iteration in the "
