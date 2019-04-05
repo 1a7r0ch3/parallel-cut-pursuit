@@ -59,7 +59,8 @@ figure(1), clf, colormap(colMap);
 xcol = floor((x0 - x0min)/(x0max - x0min)*numberOfColors) + 2;
 xcol(~supp0) = 1;
 % require octave 4.2.2 or later, fixing a bug in trisurf
-trisurf(mesh.f, mesh.v(:,1), mesh.v(:,2), mesh.v(:,3), xcol, 'CDataMapping', 'direct');
+trisurf(mesh.f, mesh.v(:,1), mesh.v(:,2), mesh.v(:,3), xcol, ...
+    'CDataMapping', 'direct');
 set(gca, 'Color', 'none'); axis off;
 set(gca, 'CameraPosition', CAM);
 drawnow('expose');
@@ -72,13 +73,13 @@ end
 %%%  solve the optimization problem  %%%
 tic;
 Yl1 = []; low_bnd = 0.0; upp_bnd = Inf;
-[cv, rx] = cp_pfdr_d1_ql1b_mex(y, Phi, first_edge, ...
+[Comp, rX] = cp_pfdr_d1_ql1b_mex(y, Phi, first_edge, ...
     adj_vertices, d1_weights, Yl1, l1_weights, low_bnd, upp_bnd, ...
     cp_dif_tol, cp_it_max, pfdr_rho, pfdr_cond_min, pfdr_dif_rcd, ...
     pfdr_dif_tol, pfdr_it_max, pfdr_verbose);
 time = toc;
-x = rx(cv+1); % rx is components values, cv is components indices
-clear cv rx;
+x = rX(Comp+1); % rX is components values, Comp is components assignment
+clear Comp rX;
 fprintf('Total MEX execution time %.1f s\n\n', time);
 
 %%%  compute Dice scores and print results  %%%
@@ -100,14 +101,16 @@ while 2*sabs(n0+1) < m
 end
 suppa = abss > (m/2);
 DSa = 2*sum(supp0 & suppa)/(sum(supp0) + sum(suppa));
-fprintf('Dice score: raw %.2f; approx (discard less significant with 2-means) %.2f\n\n', DS, DSa);
+fprintf(['Dice score: raw %.2f; approx (discard less significant with ' ...
+    '2-means) %.2f\n\n'], DS, DSa);
 
 % print retrieved activity
 figure(2), clf, colormap(colMap);
 xcol = floor((x - x0min)/(x0max - x0min)*numberOfColors) + 2;
 xcol(~supp) = 1;
 % be sure to run octave 4.2.2 or later, fixing a bug in trisurf
-trisurf(mesh.f, mesh.v(:,1), mesh.v(:,2), mesh.v(:,3), xcol, 'CDataMapping', 'direct');
+trisurf(mesh.f, mesh.v(:,1), mesh.v(:,2), mesh.v(:,3), xcol, ...
+    'CDataMapping', 'direct');
 set(gca, 'Color', 'none'); axis off;
 set(gca, 'CameraPosition', CAM);
 drawnow('expose');
@@ -121,7 +124,8 @@ end
 figure(3), clf, colormap(colMap);
 xcol = 1 + suppa*numberOfColors;
 % be sure to run octave 4.2.2 or later, fixing a bug in trisurf
-trisurf(mesh.f, mesh.v(:,1), mesh.v(:,2), mesh.v(:,3), xcol, 'CDataMapping', 'direct');
+trisurf(mesh.f, mesh.v(:,1), mesh.v(:,2), mesh.v(:,3), xcol, ...
+    'CDataMapping', 'direct');
 set(gca, 'Color', 'none'); axis off;
 set(gca, 'CameraPosition', CAM);
 drawnow('expose');

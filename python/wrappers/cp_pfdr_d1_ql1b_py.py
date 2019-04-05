@@ -1,33 +1,29 @@
 import numpy as np
 import os 
 import sys
-import wrapper_cp_pfdr_d1_ql1b.cp_pfdr_d1_ql1b_py_C_API as cp
+import bin.cp_pfdr_d1_ql1b_py as cp
+# import wrapper_cp_pfdr_d1_ql1b.cp_pfdr_d1_ql1b_py_C_API as cp
 
 def cp_pfdr_d1_ql1b_py(Y, A, first_edge, adj_vertices, edge_weights=None, 
                        Yl1=None, l1_weights=None, low_bnd=None, upp_bnd=None, 
                        cp_dif_tol=1e-5, cp_it_max=10, pfdr_rho=1., 
                        pfdr_cond_min=1e-2, pfdr_dif_rcd=0., pfdr_dif_tol=None, 
                        pfdr_it_max=int(1e4), verbose=int(1e3), 
-                       AtA_if_square=True, out_Obj=False, out_Time=False,
-                       out_Dif=False):
+                       AtA_if_square=True, compute_Obj=False,
+                       compute_Time=False, compute_Dif=False):
     """
-    (Comp, rX, cp_it, Obj, Time, Dif) = cp_pfdr_d1_ql1b_py(
-                       Y, A, first_edge, adj_vertices, 
-                       edge_weights=np.array([1.0], dtype='real_t'),
-                       Yl1=np.array([], dtype='real_t'), 
-                       l1_weights=np.array([0.0], dtype='real_t'), 
-                       low_bnd=np.array([-np.inf], dtype='real_t'), 
-                       upp_bnd=np.array([np.inf], dtype='real_t'), 
-                       cp_dif_tol=1e-5, cp_it_max=10, pfdr_rho=1., 
-                       pfdr_cond_min=1e-2, pfdr_dif_rcd=0., 
-                       pfdr_dif_tol=1e-3*cp_dif_tol, pfdr_it_max=int(1e4), 
-                       verbose=int(1e3), AtA_if_square=True, out_Obj=False, 
-                       out_Time=False, out_Dif=False):
-    
-    
+    Comp, rX, cp_it, Obj, Time, Dif = cp_pfdr_d1_ql1b_py(
+            Y, A, first_edge, adj_vertices, edge_weights=None, Yl1=None,
+            l1_weights=None, low_bnd=None, upp_bnd=None, cp_dif_tol=1e-5,
+            cp_it_max=10, pfdr_rho=1.0, pfdr_cond_min=1e-2, pfdr_dif_rcd=0.0,
+            pfdr_dif_tol=1e-3*cp_dif_tol, pfdr_it_max=int(1e4),
+            verbose=int(1e3), AtA_if_square=True, compute_Obj=False,
+            compute_Time=False, compute_Dif=False)
+
     Cut-pursuit algorithm with d1 (total variation) penalization, with a 
-    quadratic functional, l1 penalization and box constraints: minimize 
-    functional over a graph G = (V, E)
+    quadratic functional, l1 penalization and box constraints:
+
+    minimize functional over a graph G = (V, E)
 
         F(x) = 1/2 ||y - A x||^2 + ||x||_d1 + ||yl1 - x||_l1 + i_[m,M](x)
 
@@ -48,15 +44,13 @@ def cp_pfdr_d1_ql1b_py(Y, A, first_edge, adj_vertices, edge_weights=None,
     Thus, it is sufficient to call the method with Y <- Dy, and A <- D A.
     Moreover, when A is the identity and M is diagonal (weighted square l2 
     distance between x and y), one should call on the precomposed version 
-    (see below) with Y <- DDy = My and A <- D2 = M.INPUTS: real numeric type 
-    is either single or double, not both;
-            indices are C-style (start at 0) of type uint32
-            inputs with default arguments can be omited but all the subsequent
-            arguments must then be omited as well
+    (see below) with Y <- DDy = My and A <- D2 = M.
+
+    INPUTS: real numeric type is either float32 or float64, not both;
 
     NOTA: by default, components are identified using uint16_t identifiers; 
-    this can be easily changed in the mex source if more than 65535 components
-    are expected (recompilation is necessary)
+    this can be easily changed in the wrapper source if more than 65535
+    components are expected (recompilation is necessary)
 
     Y - observations, (real) array of length N (direct matricial case) or of 
         length V (premultiplied to the left by A^t), or empty matrix (for all 
@@ -71,7 +65,7 @@ def cp_pfdr_d1_ql1b_py(Y, A, first_edge, adj_vertices, edge_weights=None,
         from a same vertex are consecutive;
         for each vertex, 'first_edge' indicates the first edge starting 
             from the vertex (or, if there are none, starting from the next 
-            vertex); array of length V+1 (uint32), the last value is the total             
+            vertex); array of length V+1 (uint32), the last value is the total
             number of edges;
         for each edge, 'adj_vertices' indicates its ending vertex, array of 
             length E (uint32)
@@ -99,7 +93,7 @@ def cp_pfdr_d1_ql1b_py(Y, A, first_edge, adj_vertices, edge_weights=None,
     pfdr_dif_rcd - reconditioning criterion on iterate evolution;
                    a reconditioning is performed if relative changes of the
                    iterate drops below dif_rcd
-                   warning: reconditioning might temporarily draw minimizer                       
+                   warning: reconditioning might temporarily draw minimizer 
                    away from solution, and give bad subproblem solutions
     pfdr_dif_tol - stopping criterion on iterate evolution; algorithm stops if
                    relative changes (in Euclidean norm) is less than dif_tol
@@ -109,25 +103,25 @@ def cp_pfdr_d1_ql1b_py(Y, A, first_edge, adj_vertices, edge_weights=None,
     verbose      - if nonzero, display information on the progress, every
                    'verbose' PFDR iterations
     AtA_if_square - if A is square, set this to false for direct matricial case
-    out_Obj  - function return the optional output Obj if set to True 
-    out_Time - function return the optional output Time if set to True 
-    out_Dif  - function return the optional output Dif if set to True 
+    compute_Obj  - compute the objective functional along iterations 
+    compute_Time - monitor elapsing time along iterations
+    compute_Dif  - compute relative evolution along iterations 
 
+    OUTPUTS: Obj, Time, Dif are optional outputs, set optional input
+        compute_Obj, compute_Time, compute_Dif to True to get them 
 
-    OUTPUTS: Obj, Time, Dif are optional outputs, set optional input out_Obj, 
-        out_Time, out_Dif to True to optain them 
-
-    Comp - assignement of each vertex to a component, array of length V (uint16)
-    rX   - values of eachcomponents of the minimizer, array of length rV (real);
-           the actual minimizer is then reconstructed as X = rX(Comp + 1);
-    it   - actual number of cut-pursuit iterations performed
-    Obj  - the values of the objective functional along iterations (array of
-           length it + 1) in the precomputed A^t A version, a constant
-           1/2||Y||^2 in the quadratic part is omited
+    Comp - assignement of each vertex to a component, array of length V
+        (uint16)
+    rX - values of each component of the minimizer, array of length rV (real);
+        the actual minimizer is then reconstructed as X = rX[Comp];
+    cp_it - actual number of cut-pursuit iterations performed
+    Obj - if requested, the values of the objective functional along iterations
+        (array of length cp_it + 1); in the precomputed A^t A version, a
+        constant 1/2||Y||^2 in the quadratic part is omited
     Time - if requested, the elapsed time along iterations
-           (array of length cp_it + 1)
+        (array of length cp_it + 1)
     Dif  - if requested, the iterate evolution along iterations
-           (array of length cp_it)
+        (array of length cp_it)
 
     Parallel implementation with OpenMP API.
 
@@ -152,74 +146,81 @@ def cp_pfdr_d1_ql1b_py(Y, A, first_edge, adj_vertices, edge_weights=None,
     elif determine_type(Yl1):
         real_t = determine_type(Yl1)
     else:
-        raise TypeError("Wrong type of argument (Y, A, and Yl1)")
+        raise TypeError('Wrong type of argument (Y, A, and Yl1)')
  
     # Convert in numpy array scalar entry : Y, A, first_edge adj_vertices, edge_weights, Yl1, l1_weights, low_bnd, upp_bnd, and define float numpy array argument with the right float type, if empty:
-    if type(Y)!=np.ndarray:
-        raise TypeError("Y must be a numpy.array")
+    if type(Y) != np.ndarray:
+        raise TypeError('argument `Y` must be a numpy array')
 
-    if type(A)!=np.ndarray:
+    if type(A) != np.ndarray:
         if type(A) == list:
-            raise TypeError("A can not be a list, must be either a %s or a numpy.array" %real_t)
+            raise TypeError('argument `A` must be a scalar or a numpy array')
         else:
             A = np.array([A], real_t)
 
-    if type(first_edge)!=np.ndarray or first_edge.dtype != 'uint32':
-        raise TypeError("first_edge must be a numpy.array of uint32 type")
+    if type(first_edge) != np.ndarray or first_edge.dtype != 'uint32':
+        raise TypeError('first_edge must be a numpy array of uint32 type')
 
-    if type(adj_vertices)!=np.ndarray or adj_vertices.dtype != 'uint32':
-        raise TypeError("adj_vertices must be a numpy.array of uint32 type")
+    if type(adj_vertices) != np.ndarray or adj_vertices.dtype != 'uint32':
+        raise TypeError('adj_vertices must be a numpy array of uint32 type')
 
-    if type(edge_weights)!=np.ndarray:
+    if type(edge_weights) != np.ndarray:
         if type(edge_weights) == list:
-            raise TypeError("edge_weights can not be a list, must be either a %s or a numpy.array" %real_t)
+            raise TypeError('edge_weights must be a scalar or a numpy array')
         elif edge_weights != None:
             edge_weights = np.array([edge_weights], dtype=real_t)
         else:
             edge_weights = np.array([1.0], dtype=real_t)
 
-    if type(Yl1)!=np.ndarray:
+    if type(Yl1) != np.ndarray:
         if type(Yl1) == list:
-            raise TypeError("Yl1 can not be a list, must be either a %s or a numpy.array" %real_t)
+            raise TypeError('argument Yl1 must be a scalar or a numpy array')
         elif Yl1 != None:
             Yl1 = np.array([Yl1], dtype=real_t)
         else:
-            Yl1=np.array([], dtype=real_t)
+            Yl1 = np.array([], dtype=real_t)
 
-    if type(l1_weights)!=np.ndarray:
+    if type(l1_weights) != np.ndarray:
         if type(l1_weights) == list:
-            raise TypeError("l1_weights can not be a list, must be either a %s or a numpy.array" %real_t)
+            raise TypeError('l1_weights must be a scalar or a numpy array')
         elif l1_weights != None:
             l1_weights = np.array([l1_weights], dtype=real_t)
-        else 
-            l1_weights=np.array([0.0], dtype=real_t)
+        else:
+            l1_weights = np.array([0.0], dtype=real_t)
 
-    if type(low_bnd)!=np.ndarray:
+    if type(low_bnd) != np.ndarray:
         if type(low_bnd) == list:
-            raise TypeError("low_bnd can not be a list, must be either a %s or a numpy.array" %real_t)
+            raise TypeError('low_bnd must be a scalar or a numpy array')
         elif low_bnd != None:
             low_bnd = np.array([low_bnd], dtype=real_t)
         else: 
-            low_bnd=np.array([-np.inf], dtype=real_t)
+            low_bnd = np.array([-np.inf], dtype=real_t)
 
-    if type(upp_bnd)!=np.ndarray:
+    if type(upp_bnd) != np.ndarray:
         if type(upp_bnd) == list:
-            raise TypeError("upp_bnd can not be a list, must be either a %s or a numpy.array" %real_t)
+            raise TypeError('upp_bnd must be a scalar or a numpy array')
         elif upp_bnd != None:
             upp_bnd = np.array([upp_bnd], dtype=real_t)
         else: 
-            upp_bnd=np.array([np.inf], dtype=real_t)
+            upp_bnd = np.array([np.inf], dtype=real_t)
 
     
     # Check type of all numpy.array arguments of type float (Y, A, edge_weights, Yl1, l1_weights, low_bnd, upp_bnd) 
-    for name, ar_args in zip(["Y", "A", "edge_weights", "Yl1", "l1_weights", "low_bnd", "upp_bnd"], [Y, A, edge_weights, Yl1, l1_weights, low_bnd, upp_bnd]):
+    for name, ar_args in zip(
+            ["Y", "A", "edge_weights", "Yl1", "l1_weights", "low_bnd",
+             "upp_bnd"],
+            [Y, A, edge_weights, Yl1, l1_weights, low_bnd, upp_bnd]):
         if ar_args.dtype != real_t:
             raise TypeError("%s must be of %s type " %(name, real_t))
 
     # Check fortran continuity of all numpy.array arguments of type float (Y, A, first_edge, adj_vertices, edge_weights, Yl1, l1_weights, low_bnd, upp_bnd) 
-    for name, ar_args in zip(["Y", "A", "first_edge", "adj_vertices", "edge_weights", "Yl1", "l1_weights", "low_bnd", "upp_bnd"], [Y, A, first_edge, adj_vertices, edge_weights, Yl1, l1_weights, low_bnd, upp_bnd]):
+    for name, ar_args in zip(
+            ["Y", "A", "first_edge", "adj_vertices", "edge_weights", "Yl1",
+             "l1_weights", "low_bnd", "upp_bnd"],
+            [Y, A, first_edge, adj_vertices, edge_weights, Yl1, l1_weights,
+             low_bnd, upp_bnd]):
         if not(ar_args.flags['F_CONTIGUOUS']):
-            raise TypeError("%s must be of F_CONTIGUOUS", %name)
+            raise TypeError("%s must be of F_CONTIGUOUS" %name)
 
     # Convert in float64 all float arguments if needed (cp_dif_tol, pfdr_rho, pfdr_cond_min, pfdr_dif_rcd, pfdr_dif_tol) 
     if pfdr_dif_tol is None:
@@ -235,34 +236,37 @@ def cp_pfdr_d1_ql1b_py(Y, A, first_edge, adj_vertices, edge_weights=None,
     pfrd_it_max = int(pfdr_it_max)
     verbose = int(verbose)
 
-    # Check type of all booleen arguments (AtA_if_square, out_Obj, out_Time, out_Dif)
-    for name, b_args in zip(["AtA_if_square", "out_Obj", "out_Time", "out_Dif"], [AtA_if_square, out_Obj, out_Time, out_Dif]):
+    # Check type of all booleen arguments (AtA_if_square, compute_Obj,
+    # compute_Time, compute_Dif)
+    for name, b_args in zip(
+            ["AtA_if_square", "compute_Obj", "compute_Time", "compute_Dif"],
+            [AtA_if_square, compute_Obj, compute_Time, compute_Dif]):
         if type(b_args) != bool:
             raise TypeError("%s must be of bool type" %name)
 
     # Call wrapper python in C  
-    Comp, rX, it, Obj, Time, Dif = cp.py_C_API_function(Y, A, first_edge, 
-        adj_vertices, edge_weights, Yl1, l1_weights, low_bnd, upp_bnd, 
-        cp_dif_tol, cp_it_max, pfdr_rho, pfdr_cond_min, pfdr_dif_rcd, 
-        pfdr_dif_tol, pfdr_it_max, verbose, AtA_if_square, real_t == 'float64', 
-        out_Obj, out_Time, out_Dif) 
+    Comp, rX, it, Obj, Time, Dif = cp.py_C_API_function(
+        Y, A, first_edge, adj_vertices, edge_weights, Yl1, l1_weights, low_bnd,
+        upp_bnd, cp_dif_tol, cp_it_max, pfdr_rho, pfdr_cond_min, pfdr_dif_rcd,
+        pfdr_dif_tol, pfdr_it_max, verbose, AtA_if_square, real_t == 'float64',
+        compute_Obj, compute_Time, compute_Dif) 
 
     it = it[0]
     
     # Return output depending of the optional output needed
-    if (out_Obj and out_Time and out_Dif):
+    if (compute_Obj and compute_Time and compute_Dif):
         return Comp, rX, it, Obj, Time, Dif
-    elif (out_Obj and out_Time):
+    elif (compute_Obj and compute_Time):
         return Comp, rX, it, Obj, Time
-    elif (out_Obj and out_Dif):
+    elif (compute_Obj and compute_Dif):
         return Comp, rX, it, Obj, Dif
-    elif (out_Time and out_Dif):
+    elif (compute_Time and compute_Dif):
         return Comp, rX, it, Time, Dif
-    elif (out_Obj):
+    elif (compute_Obj):
         return Comp, rX, it, Obj
-    elif (out_Time):
+    elif (compute_Time):
         return Comp, rX, it, Time
-    elif (out_Dif):
+    elif (compute_Dif):
         return Comp, rX, it, Dif
     else:
         return Comp, rX, it
@@ -271,11 +275,11 @@ def determine_type(Y):
     
     if Y.any() and Y.dtype == 'float64':
         real_t = 'float64' 
-    if Y.any() and Y.dtype == 'float32':
+    elif Y.any() and Y.dtype == 'float32':
         real_t = 'float32' 
-    elif type(Y) = 'float64':
+    elif type(Y) == 'float64':
         real_t = 'float64'
-    elif type(Y) = 'float32':
+    elif type(Y) == 'float32':
         real_t = 'float32'
     else:
         real_t = None 

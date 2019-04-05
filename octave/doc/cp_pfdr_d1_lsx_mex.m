@@ -1,9 +1,9 @@
-function [Comp, rX, it, Obj, Time, Dif] = cp_pfdr_d1_lsx_mex(loss, Y, ...
+function [Comp, rX, cp_it, Obj, Time, Dif] = cp_pfdr_d1_lsx_mex(loss, Y, ...
     first_edge, adj_vertices, edge_weights, loss_weights, ...
     d1_coor_weights, cp_dif_tol, cp_it_max, pfdr_rho, pfdr_cond_min, ...
     pfdr_dif_rcd, pfdr_dif_tol, pfdr_it_max, verbose)
 %
-%        [Comp, rX, it, Obj, Time, Dif] = cp_pfdr_d1_lsx_mex(loss, Y,
+%        [Comp, rX, cp_it, Obj, Time, Dif] = cp_pfdr_d1_lsx_mex(loss, Y,
 %   first_edge, adj_vertices, edge_weights = 1.0, loss_weights = [],
 %   d1_coor_weights = [], cp_dif_tol = 1e-3, cp_it_max = 10, pfdr_rho = 1.0,
 %   pfdr_cond_min = 1e-2, pfdr_dif_rcd = 0.0, pfdr_dif_tol = 1e-3*cp_dif_tol,
@@ -35,7 +35,7 @@ function [Comp, rX, it, Obj, Time, Dif] = cp_pfdr_d1_lsx_mex(loss, Y, ...
 %       f(x) = 1/2 ||y - x||_{l2,w}^2 ,
 %   with  ||y - x||_{l2,w}^2 = sum_{v,d} w_v (y_{v,d} - x_{v,d})^2 ;
 %
-% 0 < loss < 1 for smoothed Kullback-Leibler divergence (cross-entropy)
+% smoothed Kullback-Leibler divergence (cross-entropy)
 %     f(x) = sum_v w_v KLs(x_v, y_v),
 % with KLs(y_v, x_v) = KL(s u + (1 - s) y_v ,  s u + (1 - s) x_v), where
 %     KL is the regular Kullback-Leibler divergence,
@@ -59,10 +59,10 @@ function [Comp, rX, it, Obj, Time, Dif] = cp_pfdr_d1_lsx_mex(loss, Y, ...
 % can be easily changed in the mex source if more than 65535 components are
 % expected (recompilation is necessary)
 %
-% loss  - 0 for linear, 1 for quadratic, 0 < loss < 1 for smoothed
+% loss - 0 for linear, 1 for quadratic, 0 < loss < 1 for smoothed
 %     Kullback-Leibler (see above)
 % Y - observations, (real) D-by-V array, column-major format (at each
-%     vertex, supposed to lie on the probability simplex);
+%     vertex, supposed to lie on the probability simplex)
 % first_edge, adj_vertices - graph forward-star representation:
 %     edges are numeroted (C-style indexing) so that all vertices originating
 %         from a same vertex are consecutive;
@@ -107,9 +107,9 @@ function [Comp, rX, it, Obj, Time, Dif] = cp_pfdr_d1_lsx_mex(loss, Y, ...
 % Comp - assignement of each vertex to a component, array of length V (uint16)
 % rX   - values of each component of the minimizer, array of length rV (real);
 %        the actual minimizer is then reconstructed as X = rX(Comp + 1);
-% it   - actual number of cut-pursuit iterations performed
+% cp_it - actual number of cut-pursuit iterations performed
 % Obj  - the values of the objective functional along iterations (array of
-%        length it + 1)
+%        length cp_it + 1)
 % Time - if requested, the elapsed time along iterations (array of length
 %        cp_it + 1)
 % Dif  - if requested, the iterate evolution along iterations
