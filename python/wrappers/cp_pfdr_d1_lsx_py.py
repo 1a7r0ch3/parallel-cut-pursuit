@@ -1,7 +1,7 @@
 import numpy as np
 import os 
 import sys
-import bin.cp_pfdr_d1_lsx_py as cp
+import bin.cp_pfdr_d1_lsx_py_C_API as cp
 # import wrapper_cp_pfdr_d1_lsx.cp_pfdr_d1_lsx_py_C_API as cp
 
 def cp_pfdr_d1_lsx_py(loss, Y, first_edge, adj_vertices, edge_weights=None, 
@@ -144,39 +144,49 @@ def cp_pfdr_d1_lsx_py(loss, Y, first_edge, adj_vertices, edge_weights=None,
     elif Y.any() and Y.dtype == 'float32':
         real_t = 'float32' 
     else:
-        raise TypeError("Y must be non empty numpy array of float (float32 or float64)") 
+        raise TypeError(('argument `Y` must be a non empty numpy array of '
+                      'floats (float32 or float64)')) 
     
-    # Convert in numpy array scalar entry :Y, first_edge, adj_vertices, edge_weights, loss_weights, d1_coor_weights and define float numpy array argument with the right float type, if empty:
+    # Convert in numpy array scalar entry: Y, first_edge, adj_vertices, 
+    # edge_weights, loss_weights, d1_coor_weights and define float numpy array
+    # argument with the right float type, if empty:
     if type(Y) != np.ndarray:
-        raise TypeError("Y must be numpy array of float (single or double)") 
+        raise TypeError(('argument `Y` must be a numpy array of floats '
+                      '(float32 or float64)')) 
 
-    if type(first_edge)!=np.ndarray or first_edge.dtype != 'uint32':
-        raise TypeError("first_edge must be a numpy.array of uint32 type")
+    if type(first_edge) != np.ndarray or first_edge.dtype != 'uint32':
+        raise TypeError(('argument `first_edge` must be a numpy array of '
+                       'uint32'))
 
-    if type(adj_vertices)!=np.ndarray or adj_vertices.dtype != 'uint32':
-        raise TypeError("adj_vertices must be a numpy.array of uint32 type")
+    if type(adj_vertices) != np.ndarray or adj_vertices.dtype != 'uint32':
+        raise TypeError(('argument `adj_vertices` must be a numpy array of '
+                       'uint32'))
 
     if type(edge_weights) != np.ndarray:
         if type(edge_weights) == list:
-            raise TypeError("edge_weights can not be a list, must be either a %s type or a numpy.array " %real_t)
+            raise TypeError(('argument `edge_weights` can not be a list, must '
+                        'be either a {0} or a numpy array').format(real_t))
         elif edge_weights != None:
-            edge_weights = np.array([edge_weights], dtype = real_t)
+            edge_weights = np.array([edge_weights], dtype=real_t)
         else:
             edge_weights = np.array([1.0], dtype=real_t)
         
     if type(loss_weights) != np.ndarray:
         if type(loss_weights) == list:
-            raise TypeError("loss_weights can not be a list, must be of either a %s or a numpy.array" %real_t)
+            raise TypeError(('argument `loss_weights` can not be a list, must '
+                        'be either a {0} or a numpy array').format(real_t))
         elif loss_weights != None:
-            loss_weights = np.array([loss_weights], dtype = real_t)
+            loss_weights = np.array([loss_weights], dtype=real_t)
         else:
             loss_weights = np.array([], dtype=real_t)
 
     if type(d1_coor_weights) != np.ndarray:
         if type(d1_coor_weights) == list:
-            raise TypeError("d1_coor_weights can not be a list, must be of either a %s or a numpy.array" %real_t)
+            raise TypeError(('argument `d1_coor_weights` can not be a list, '
+                        'must be either a {0} or a '
+                        'numpy array').format(real_t))
         elif d1_coor_weights != None:
-            d1_coor_weights = np.array([d1_coor_weights], dtype = real_t)
+            d1_coor_weights = np.array([d1_coor_weights], dtype=real_t)
         else:
             d1_coor_weights = np.array([], dtype=real_t)
  
@@ -186,17 +196,17 @@ def cp_pfdr_d1_lsx_py(loss, Y, first_edge, adj_vertices, edge_weights=None,
             ["Y", "edge_weights", "loss_weights", "d1_coor_weights"],
             [Y, edge_weights, loss_weights, d1_coor_weights]):
         if ar_args.dtype != real_t:
-            raise TypeError("%s must be of %s type " %(name, real_t))
+            raise TypeError('{0} must be of {1} type'.format(name, real_t))
 
     # Check fortran continuity of all numpy.array arguments of type float (Y,
     # first_edge, adj_vertices, edge_weights, loss_weights, d1_coor_weights)
     for name, ar_args in zip(
-            ["Y", "first_edge", "adj_vertices", "edge_weights", "loss_weights",
-             "d1_coor_weights"],
+            ["Y", "first_edge", "adj_vertices", "edge_weights", 
+             "loss_weights", "d1_coor_weights"],
             [Y, first_edge, adj_vertices, edge_weights, loss_weights,
              d1_coor_weights]):
         if not(ar_args.flags['F_CONTIGUOUS']):
-            raise TypeError("%s must be of F_CONTIGUOUS" %(name))
+            raise TypeError('{0} must be F_CONTIGUOUS'.format(name))
 
     # Convert in float64 all float arguments if needed (cp_dif_tol, pfdr_rho,
     # pfdr_cond_min, pfdr_dif_rcd, pfdr_dif_tol) 
@@ -213,12 +223,13 @@ def cp_pfdr_d1_lsx_py(loss, Y, first_edge, adj_vertices, edge_weights=None,
     pfdr_it_max = int(pfdr_it_max)
     verbose = int(verbose)
 
-    # Check type of all booleen arguments (AtA_if_square, compute_Obj, compute_Time, compute_Dif)
+    # Check type of all booleen arguments (AtA_if_square, compute_Obj, 
+    # compute_Time, compute_Dif)
     for name, b_args in zip(
         ["compute_Obj", "compute_Time", "compute_Dif"],
         [compute_Obj, compute_Time, compute_Dif]):
         if type(b_args) != bool:
-            raise TypeError("%s must be of bool type" %name)
+            raise TypeError('{0} must be a boolean'.format(name))
 
     # Call wrapper python in C  
     Comp, rX, it, Obj, Time, Dif = cp.py_C_API_function(
