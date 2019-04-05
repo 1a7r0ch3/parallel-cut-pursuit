@@ -2,8 +2,8 @@
 
 Generic C++ classes for implementing cut-pursuit algorithms.  
 Specialization to convex problems involving **graph total variation**, and nonconvex problems involving **contour length**, as explained in our articles [(Landrieu and Obozinski, 2016; Raguet and Landrieu, 2018)](#references).   
-Parallel implementation with OpenMP API.  
-MEX interfaces with GNU Octave or Matlab.  
+Parallel implementation with OpenMP.  
+MEX interfaces for GNU Octave or Matlab.  
 Extension modules for Python.  
 
 ### Table of Content  
@@ -196,10 +196,9 @@ The scripts `example_labeling_3D.m` and `example_labeling_3D_d0.m` exemplify the
 
 ### Python
 The python interfaces are documented within corresponding `.py` files in `python/wrappers/`.  
-Requires Numpy package.  
-See the script `setup.py` for compiling modules with distutils;
-currently, wrappers assume the libraries are built in `bin/` directory,
-with `python setup.py build_ext --build-lib='bin'`.  
+Requires `numpy` package.  
+See the script `setup.py` for compiling modules with `distutils`;
+currently, wrappers assume the libraries are built in a `python/bin/` directory, which can be ensured using `python setup.py build_ext --build-lib='bin'`.  
 
 The script `example_EEG.py` exemplifies the use of [`Cp_d1_ql1b`](#specialization-Cp_d1_ql1b-quadratic-functional-ℓ1-norm-bounds-and-graph-total-variation), on a task of _brain source identification with electroencephalography_.  
 

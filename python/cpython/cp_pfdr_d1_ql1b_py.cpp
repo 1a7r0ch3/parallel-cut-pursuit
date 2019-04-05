@@ -1,8 +1,8 @@
 /*=============================================================================
  * (Comp, rX, it, Obj, Time, Dif) = cp_pfdr_d1_ql1b_py(Y, A , first_edge, 
- *      adj_vertices, edge_weights, Yl1, l1_weights, low_bnd, upp_bnd, 
- *      cp_dif_tol, cp_it_max, pfdr_rho, pfdr_cond_min, pfdr_dif_rcd, 
- *      pfdr_dif_tol, pfdr_it_max, verbose, AtA_if_square)
+ *          adj_vertices, edge_weights, Yl1, l1_weights, low_bnd, upp_bnd, 
+ *          cp_dif_tol, cp_it_max, pfdr_rho, pfdr_cond_min, pfdr_dif_rcd, 
+ *          pfdr_dif_tol, pfdr_it_max, verbose, AtA_if_square)
  * 
  *  Baudoin Camille 2019
  *===========================================================================*/
@@ -14,7 +14,6 @@
 #include <Python.h>
 #include <numpy/arrayobject.h>
 #include "../../include/cp_pfdr_d1_ql1b.hpp" 
-
 
 using namespace std;
 
@@ -41,7 +40,14 @@ static const int n_index_t = 2;
 
 /* template for handling both single and double precisions */
 template<typename real_t, NPY_TYPES pyREAL_CLASS>
-static PyObject * cp_pfdr_d1_ql1b_py(PyArrayObject * py_Y, PyArrayObject * py_A, PyArrayObject * py_first_edge, PyArrayObject * py_adj_vertices, PyArrayObject * py_edge_weights, PyArrayObject * py_Yl1, PyArrayObject * py_l1_weights, PyArrayObject * py_low_bnd, PyArrayObject * py_upp_bnd, real_t cp_dif_tol, int cp_it_max, real_t pfdr_rho, real_t pfdr_cond_min, real_t pfdr_dif_rcd, real_t pfdr_dif_tol, int pfdr_it_max, int verbose, int py_AtA_if_square, int out_Obj, int out_Time, int out_Dif)
+static PyObject* cp_pfdr_d1_ql1b_py(PyArrayObject* py_Y,
+    PyArrayObject* py_A, PyArrayObject* py_first_edge,
+    PyArrayObject* py_adj_vertices, PyArrayObject* py_edge_weights,
+    PyArrayObject* py_Yl1, PyArrayObject* py_l1_weights,
+    PyArrayObject* py_low_bnd, PyArrayObject* py_upp_bnd, real_t cp_dif_tol,
+    int cp_it_max, real_t pfdr_rho, real_t pfdr_cond_min, real_t pfdr_dif_rcd,
+    real_t pfdr_dif_tol, int pfdr_it_max, int verbose, int py_AtA_if_square,
+    int compute_Obj, int compute_Time, int compute_Dif)
 {
     /**  get inputs  **/
 
@@ -50,7 +56,7 @@ static PyObject * cp_pfdr_d1_ql1b_py(PyArrayObject * py_Y, PyArrayObject * py_A,
     size_t N = py_A_size[0];
     index_t V = py_A_size[1];
 
-    const real_t *Y = PyArray_SIZE(py_Y)>0 ?
+    const real_t *Y = PyArray_SIZE(py_Y) > 0 ?
         (real_t*) PyArray_DATA(py_Y) : nullptr;
     const real_t *A = (N == 1 && V == 1) ?
         nullptr : (real_t*) PyArray_DATA(py_A); 
@@ -60,29 +66,33 @@ static PyObject * cp_pfdr_d1_ql1b_py(PyArrayObject * py_Y, PyArrayObject * py_A,
 
     if (V == 1){ /* quadratic functional is only weighted square difference */
         if (N == 1){
-            if (PyArray_SIZE(py_Y)>0){ /* fidelity is square l2 */
+            if (PyArray_SIZE(py_Y) > 0){ /* fidelity is square l2 */
                 V = PyArray_SIZE(py_Y);
-            }else if (PyArray_SIZE (py_edge_weights)>0){ /* fidelity is only l1 */
+            }else if (PyArray_SIZE (py_edge_weights) > 0){
+                /* fidelity is only l1 */
                 V = PyArray_SIZE(py_edge_weights);
             }else{ /*should not happen */
-                PyErr_SetString(PyExc_ValueError, "Cut-pursuit d1 quadratic l1 bounds: arguments Y and Yl1 cannot be both empty.");
+                PyErr_SetString(PyExc_ValueError, "Cut-pursuit d1 quadratic l1"
+                    " bounds: arguments Y and Yl1 cannot be both empty.");
             }
         }else{ /* A is given V-by-1, representing a diagonal V-by-V */
             V = N;
         }
-        N = DIAG_ATA; /* DIAG_ATA ?? */
+        N = DIAG_ATA; /* DIAG_ATA is a macro */
     }else if (V == N && (py_AtA_if_square==1)){
         N = FULL_ATA; 
     }
-
 
     /* graph structure */
     index_t E = PyArray_SIZE(py_adj_vertices);
     const index_t *first_edge = (index_t*) PyArray_DATA(py_first_edge); 
     const index_t *adj_vertices = (index_t*) PyArray_DATA(py_adj_vertices); 
     if (PyArray_SIZE(py_first_edge) != (V + 1)){
-        std::stringstream py_err_mess; py_err_mess << "Cut-pursuit d1 quadratic l1 bounds: argument 3 'adj_vertices' should contain" << (V+1) << " (|V|+1) elements, but " << PyArray_SIZE(py_first_edge) << "are given.";
-        PyErr_SetString(PyExc_ValueError, py_err_mess.str().c_str());
+        std::stringstream py_err_msg;
+        py_err_msg << "Cut-pursuit d1 quadratic l1 bounds: argument 3 "
+            "'adj_vertices' should contain" << (V+1) << " (|V|+1) elements, "
+            "but " << PyArray_SIZE(py_first_edge) << "are given.";
+        PyErr_SetString(PyExc_ValueError, py_err_msg.str().c_str());
     }
 
     /* penalizations */
@@ -116,37 +126,41 @@ static PyObject * cp_pfdr_d1_ql1b_py(PyArrayObject * py_Y, PyArrayObject * py_A,
     /**  prepare output; rX is created later  **/
 
     npy_intp size_py_comp_t[] = {V};
-    PyArrayObject *py_comp_t = (PyArrayObject*) PyArray_Zeros(1, size_py_comp_t, PyArray_DescrFromType(COMP_CLASS), 1);
+    PyArrayObject* py_comp_t = (PyArrayObject*) PyArray_Zeros(1,
+        size_py_comp_t, PyArray_DescrFromType(COMP_CLASS), 1);
     comp_t *Comp = (comp_t*) PyArray_DATA(py_comp_t); 
 
     npy_intp size_py_it[] = {1};
-    PyArrayObject *py_it = (PyArrayObject*) PyArray_Zeros(1, size_py_it, PyArray_DescrFromType(NPY_UINT32), 1);
-    int *it = (int*) PyArray_DATA(py_it); 
+    PyArrayObject* py_it = (PyArrayObject*) PyArray_Zeros(1, size_py_it,
+        PyArray_DescrFromType(NPY_UINT32), 1);
+    int* it = (int*) PyArray_DATA(py_it); 
 
-    real_t *Obj = nullptr;
-    PyArrayObject *py_Obj = (PyArrayObject*) Py_None;
-    if (out_Obj == 1){
+    real_t* Obj = nullptr;
+    PyArrayObject* py_Obj = (PyArrayObject*) Py_None;
+    if (compute_Obj){
         npy_intp size_py_Obj[] = {cp_it_max+1};
-        py_Obj = (PyArrayObject*) PyArray_Zeros(1, size_py_Obj, PyArray_DescrFromType(pyREAL_CLASS), 1);
+        py_Obj = (PyArrayObject*) PyArray_Zeros(1, size_py_Obj,
+            PyArray_DescrFromType(pyREAL_CLASS), 1);
         Obj = (real_t*) PyArray_DATA(py_Obj);
-    } 
+    }
 
-    double *Time = nullptr;
-    PyArrayObject *py_Time = (PyArrayObject*) Py_None;
-    if (out_Time == 1){
+    double* Time = nullptr;
+    PyArrayObject* py_Time = (PyArrayObject*) Py_None;
+    if (compute_Time){
         npy_intp size_py_Time[] = {cp_it_max+1};
-        py_Time = (PyArrayObject*) PyArray_Zeros(1, size_py_Time, PyArray_DescrFromType(pyREAL_CLASS), 1);
+        py_Time = (PyArrayObject*) PyArray_Zeros(1, size_py_Time,
+            PyArray_DescrFromType(pyREAL_CLASS), 1);
         Time = (double*) PyArray_DATA(py_Time);
     }
 
-    real_t *Dif = nullptr;
-    PyArrayObject *py_Dif = (PyArrayObject*) Py_None;
-    if (out_Dif == 1){
+    real_t* Dif = nullptr;
+    PyArrayObject* py_Dif = (PyArrayObject*) Py_None;
+    if (compute_Dif){
         npy_intp size_py_Dif[] = {cp_it_max};
-        py_Dif = (PyArrayObject*) PyArray_Zeros(1, size_py_Dif, PyArray_DescrFromType(pyREAL_CLASS), 1);
+        py_Dif = (PyArrayObject*) PyArray_Zeros(1, size_py_Dif,
+            PyArray_DescrFromType(pyREAL_CLASS), 1);
         Dif = (real_t*) PyArray_DATA(py_Dif);
     }
-
 
     /**  cut-pursuit with preconditioned forward-Douglas-Rachford  **/
 
@@ -167,59 +181,71 @@ static PyObject * cp_pfdr_d1_ql1b_py(PyArrayObject * py_Y, PyArrayObject * py_A,
 
     /* copy reduced values */
     comp_t rV = cp->get_components();
-    real_t *cp_rX = cp->get_reduced_values();
+    real_t* cp_rX = cp->get_reduced_values();
     npy_intp size_py_rX[] = {rV};
-    PyArrayObject *py_rX = (PyArrayObject*) PyArray_Zeros(1, size_py_rX, PyArray_DescrFromType(pyREAL_CLASS), 1);
+    PyArrayObject* py_rX = (PyArrayObject*) PyArray_Zeros(1, size_py_rX,
+        PyArray_DescrFromType(pyREAL_CLASS), 1);
     real_t *rX = (real_t*) PyArray_DATA(py_rX);
     for (comp_t rv = 0; rv < rV; rv++){ rX[rv] = cp_rX[rv]; }
 
     cp->set_components(0, nullptr); // prevent Comp to be free()'d
     delete cp;
-    return Py_BuildValue("OOOOOO", py_comp_t, py_rX, py_it, py_Obj, py_Time, py_Dif); 
+    return Py_BuildValue("OOOOOO", py_comp_t, py_rX, py_it, py_Obj, py_Time,
+        py_Dif); 
 }
 
 /* My python wrapper */
 static PyObject* py_C_API_function(PyObject * self, PyObject * args)
 { 
-
     /* My INPUT */ 
-    PyArrayObject *py_Y, *py_A, *py_first_edge, *py_adj_vertices, *py_edge_weights, *py_Yl1, *py_l1_weights, *py_low_bnd, *py_upp_bnd; 
+    PyArrayObject *py_Y, *py_A, *py_first_edge, *py_adj_vertices,
+        *py_edge_weights, *py_Yl1, *py_l1_weights, *py_low_bnd, *py_upp_bnd; 
     double cp_dif_tol, pfdr_rho, pfdr_cond_min, pfdr_dif_rcd, pfdr_dif_tol;
-    int cp_it_max, pfdr_it_max, verbose, AtA_if_square, real_t_double, out_Obj, out_Time, out_Dif; 
-
+    int cp_it_max, pfdr_it_max, verbose, AtA_if_square, real_t_double,
+        compute_Obj, compute_Time, compute_Dif; 
     
     /* parse the input, from python Object to c PyArray, double, or int type */
-    if(!PyArg_ParseTuple(args, "OOOOOOOOOdiddddiippppp", &py_Y, &py_A, &py_first_edge, &py_adj_vertices, &py_edge_weights, &py_Yl1, &py_l1_weights, &py_low_bnd, &py_upp_bnd, &cp_dif_tol, &cp_it_max, &pfdr_rho, &pfdr_cond_min, &pfdr_dif_rcd, &pfdr_dif_tol, &pfdr_it_max, &verbose, &AtA_if_square, &real_t_double, &out_Obj, &out_Time, &out_Dif)) {
+    if(!PyArg_ParseTuple(args, "OOOOOOOOOdiddddiippppp", &py_Y, &py_A,
+        &py_first_edge, &py_adj_vertices, &py_edge_weights, &py_Yl1,
+        &py_l1_weights, &py_low_bnd, &py_upp_bnd, &cp_dif_tol, &cp_it_max,
+        &pfdr_rho, &pfdr_cond_min, &pfdr_dif_rcd, &pfdr_dif_tol, &pfdr_it_max,
+        &verbose, &AtA_if_square, &real_t_double, &compute_Obj, &compute_Time,
+        &compute_Dif)) {
         return NULL;
     }
 
-    /* real_t type is double */
-    if (real_t_double == 1){
-        PyObject* PyReturn = cp_pfdr_d1_ql1b_py<double, NPY_FLOAT64>(py_Y, py_A, py_first_edge, py_adj_vertices, py_edge_weights, py_Yl1, py_l1_weights, py_low_bnd, py_upp_bnd, cp_dif_tol, cp_it_max, pfdr_rho, pfdr_cond_min, pfdr_dif_rcd, pfdr_dif_tol, pfdr_it_max, verbose, AtA_if_square, out_Obj, out_Time, out_Dif);
-    return PyReturn;
-    }
-    /* real_t type is float */
-    else{
-        /* Recast double in float */
+    if (real_t_double){ /* real_t type is double */
+        PyObject* PyReturn = cp_pfdr_d1_ql1b_py<double, NPY_FLOAT64>(py_Y,
+            py_A, py_first_edge, py_adj_vertices, py_edge_weights, py_Yl1,
+            py_l1_weights, py_low_bnd, py_upp_bnd, cp_dif_tol, cp_it_max,
+            pfdr_rho, pfdr_cond_min, pfdr_dif_rcd, pfdr_dif_tol, pfdr_it_max,
+            verbose, AtA_if_square, compute_Obj, compute_Time, compute_Dif);
+        return PyReturn;
+    }else{ /* real_t type is float */
         float cp_dif_tol_f = (float) cp_dif_tol;
         float pfdr_rho_f = (float) pfdr_rho;
         float pfdr_cond_min_f = (float) pfdr_cond_min;
         float pfdr_dif_rcd_f = (float) pfdr_dif_rcd;
         float pfdr_dif_tol_f = (float) pfdr_dif_tol;
-        PyObject* PyReturn = cp_pfdr_d1_ql1b_py<float, NPY_FLOAT32>(py_Y, py_A, py_first_edge, py_adj_vertices, py_edge_weights, py_Yl1, py_l1_weights, py_low_bnd, py_upp_bnd, cp_dif_tol_f, cp_it_max, pfdr_rho_f, pfdr_cond_min_f, pfdr_dif_rcd_f, pfdr_dif_tol_f, pfdr_it_max, verbose, AtA_if_square, out_Obj, out_Time, out_Dif);
-    return PyReturn;
+        PyObject* PyReturn = cp_pfdr_d1_ql1b_py<float, NPY_FLOAT32>(py_Y, py_A,
+            py_first_edge, py_adj_vertices, py_edge_weights, py_Yl1,
+            py_l1_weights, py_low_bnd, py_upp_bnd, cp_dif_tol_f, cp_it_max,
+            pfdr_rho_f, pfdr_cond_min_f, pfdr_dif_rcd_f, pfdr_dif_tol_f,
+            pfdr_it_max, verbose, AtA_if_square, compute_Obj, compute_Time,
+            compute_Dif);
+        return PyReturn;
     }
 }
 
 static PyMethodDef cp_pfdr_d1_ql1b_py_C_API_methods[] = {
-    {"py_C_API_function", py_C_API_function, METH_VARARGS, "wrapper for parallel cut pursuit"},
+    {"py_C_API_function", py_C_API_function, METH_VARARGS,
+        "wrapper for parallel cut pursuit"},
     {NULL, NULL, 0, NULL}
-}; 
-
+};
 
 #if PY_MAJOR_VERSION >= 3
 /* module initialization */
-/* Python version 3*/
+/* Python version 3 */
 static struct PyModuleDef cp_pfdr_d1_ql1b_py_C_API_module = {
     PyModuleDef_HEAD_INIT,
     "cp_pfdr_d1_ql1b_py_C_API",   /* name of module */
@@ -243,7 +269,8 @@ PyInit_cp_pfdr_d1_ql1b_py_C_API(void)
 PyMODINIT_FUNC
 initcp_pfdr_d1_ql1b_py_C_API_module(void)
 {
-    (void) Py_InitModule("cp_pfdr_d1_ql1b_py_C_API", cp_pfdr_d1_ql1b_py_C_API_methods);
+    (void) Py_InitModule("cp_pfdr_d1_ql1b_py_C_API",
+        cp_pfdr_d1_ql1b_py_C_API_methods);
     import_array() /* IMPORTANT: this must be called to use numpy array */
 }
 
