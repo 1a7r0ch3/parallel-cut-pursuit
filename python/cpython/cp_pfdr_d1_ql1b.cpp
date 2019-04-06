@@ -1,8 +1,9 @@
 /*=============================================================================
- * (Comp, rX, it, Obj, Time, Dif) = cp_pfdr_d1_ql1b(Y, A , first_edge, 
- *          adj_vertices, edge_weights, Yl1, l1_weights, low_bnd, upp_bnd, 
- *          cp_dif_tol, cp_it_max, pfdr_rho, pfdr_cond_min, pfdr_dif_rcd, 
- *          pfdr_dif_tol, pfdr_it_max, verbose, AtA_if_square)
+ * Comp, rX, it, Obj, Time, Dif = cp_pfdr_d1_ql1b_ext(
+ *          Y, A, first_edge, adj_vertices, edge_weights, Yl1, l1_weights,
+ *          low_bnd, upp_bnd, cp_dif_tol, cp_it_max, pfdr_rho, pfdr_cond_min,
+ *          pfdr_dif_rcd, pfdr_dif_tol, pfdr_it_max, verbose, AtA_if_square,
+ *          real_t_double, compute_Obj, compute_Time, compute_Dif)
  * 
  *  Baudoin Camille 2019
  *===========================================================================*/
@@ -31,12 +32,6 @@ typedef uint16_t comp_t;
 // typedef uint32_t comp_t;
 // # define COMP_CLASS NPY_UINT32 
 // # define COMP_ID "uint32"
-
-/* arrays with arguments type */
-static const int args_real_t[] = {0, 1, 4, 5, 6};
-static const int n_real_t = 4;
-static const int args_index_t[] = {2, 3};
-static const int n_index_t = 2;
 
 /* template for handling both single and double precisions */
 template<typename real_t, NPY_TYPES pyREAL_CLASS>
@@ -204,8 +199,12 @@ static PyObject* cp_pfdr_d1_ql1b_ext(PyObject * self, PyObject * args)
     int cp_it_max, pfdr_it_max, verbose, AtA_if_square, real_t_double,
         compute_Obj, compute_Time, compute_Dif; 
     
-    /* parse the input, from python Object to c PyArray, double, or int type */
+    /* parse the input, from Python Object to C PyArray, double, or int type */
+#if PY_MAJOR_VERSION >= 3
     if(!PyArg_ParseTuple(args, "OOOOOOOOOdiddddiippppp", &py_Y, &py_A,
+#else // python 2 does not accept the 'p' format specifier
+    if(!PyArg_ParseTuple(args, "OOOOOOOOOdiddddiiiiiii", &py_Y, &py_A,
+#endif
         &py_first_edge, &py_adj_vertices, &py_edge_weights, &py_Yl1,
         &py_l1_weights, &py_low_bnd, &py_upp_bnd, &cp_dif_tol, &cp_it_max,
         &pfdr_rho, &pfdr_cond_min, &pfdr_dif_rcd, &pfdr_dif_tol, &pfdr_it_max,
@@ -222,15 +221,10 @@ static PyObject* cp_pfdr_d1_ql1b_ext(PyObject * self, PyObject * args)
             verbose, AtA_if_square, compute_Obj, compute_Time, compute_Dif);
         return PyReturn;
     }else{ /* real_t type is float */
-        float cp_dif_tol_f = (float) cp_dif_tol;
-        float pfdr_rho_f = (float) pfdr_rho;
-        float pfdr_cond_min_f = (float) pfdr_cond_min;
-        float pfdr_dif_rcd_f = (float) pfdr_dif_rcd;
-        float pfdr_dif_tol_f = (float) pfdr_dif_tol;
         PyObject* PyReturn = cp_pfdr_d1_ql1b<float, NPY_FLOAT32>(py_Y, py_A,
             py_first_edge, py_adj_vertices, py_edge_weights, py_Yl1,
-            py_l1_weights, py_low_bnd, py_upp_bnd, cp_dif_tol_f, cp_it_max,
-            pfdr_rho_f, pfdr_cond_min_f, pfdr_dif_rcd_f, pfdr_dif_tol_f,
+            py_l1_weights, py_low_bnd, py_upp_bnd, cp_dif_tol, cp_it_max,
+            pfdr_rho, pfdr_cond_min, pfdr_dif_rcd, pfdr_dif_tol,
             pfdr_it_max, verbose, AtA_if_square, compute_Obj, compute_Time,
             compute_Dif);
         return PyReturn;
@@ -243,8 +237,8 @@ static PyMethodDef cp_pfdr_d1_ql1b_methods[] = {
     {NULL, NULL, 0, NULL}
 };
 
-#if PY_MAJOR_VERSION >= 3
 /* module initialization */
+#if PY_MAJOR_VERSION >= 3
 /* Python version 3 */
 static struct PyModuleDef cp_pfdr_d1_ql1b_module = {
     PyModuleDef_HEAD_INIT,
@@ -278,4 +272,3 @@ initcp_pfdr_d1_ql1b_ext(void)
 }
 
 #endif
-

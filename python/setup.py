@@ -14,8 +14,17 @@ import shutil # for rmtree, os.rmdir can only remove _empty_ directory
 import os 
 import re
 
-to_compile=["cp_pfdr_d1_lsx_ext", "cp_pfdr_d1_ql1b_ext"]
+###  targets and compile options  ###
+to_compile = [ # comment undesired extension modules
+    "cp_pfdr_d1_ql1b_ext",
+    "cp_pfdr_d1_lsx_ext",
+]
+include_dirs = [numpy.get_include()] # find the Numpy headers
+# compilation and linkage options
+extra_compile_args = ["-Wextra", "-Wpedantic", "-std=c++11", "-fopenmp"]
+extra_link_args = ["-lgomp"]
 
+###  auxiliary functions  ###
 class MyBuild(build):
     def initialize_options(self):
         build.initialize_options(self)
@@ -34,50 +43,45 @@ tmp_work_dir = os.path.realpath(os.curdir)
 os.chdir(os.path.realpath(os.path.dirname(__file__)))
 # remove previously compiled lib
 for shared_obj in to_compile: 
-    try:
-        purge("bin/", shared_obj) 
-    except FileNotFoundError:
-        pass
+    purge("bin/", shared_obj) 
 
 ###  compilation  ###
-# cp_pfdr_d1_lsx_py
-name = "cp_pfdr_d1_lsx_ext" # Has to be the same PyInit_....
-mod = Extension(
-        name,
-        # list source files
-        ["cpython/cp_pfdr_d1_lsx.cpp", "../src/cp_pfdr_d1_lsx.cpp",
-         "../src/cut_pursuit_d1.cpp", "../src/cut_pursuit.cpp",
-         "../src/cp_graph.cpp", "../src/pfdr_d1_lsx.cpp",
-         "../src/proj_simplex.cpp", "../src/pfdr_graph_d1.cpp",
-         "../src/pcd_fwd_doug_rach.cpp", "../src/pcd_prox_split.cpp"], 
-        # Make sure to include the Numpy headers
-        include_dirs = [numpy.get_include()],
-        # compilation and linkage options
-        extra_compile_args = ["-Wextra", "-Wpedantic", "-std=c++11",
-                "-fopenmp"],
-        extra_link_args= ["-lgomp"]
-    )
-setup(name=name, ext_modules=[mod], cmdclass=dict(build=MyBuild))
 
-# cp_pfdr_d1_ql1b_py
 name = "cp_pfdr_d1_ql1b_ext"
-mod = Extension(
-        name,
-        # list source files
-        ["cpython/cp_pfdr_d1_ql1b.cpp", "../src/cp_pfdr_d1_ql1b.cpp",
-         "../src/cut_pursuit_d1.cpp", "../src/cut_pursuit.cpp",
-         "../src/cp_graph.cpp", "../src/pfdr_d1_ql1b.cpp",
-         "../src/matrix_tools.cpp", "../src/pfdr_graph_d1.cpp", 
-         "../src/pcd_fwd_doug_rach.cpp", "../src/pcd_prox_split.cpp"],
-        # Make sure to include the Numpy headers
-        include_dirs = [numpy.get_include()],
-        # compilation and linkage options
-        extra_compile_args = ["-Wextra", "-Wpedantic", "-std=c++11",
-                "-fopenmp"],
-        extra_link_args= ["-lgomp"]
-    )
-setup(name=name, ext_modules=[mod], cmdclass=dict(build=MyBuild))
+if name in to_compile:
+    mod = Extension(
+            name,
+            # list source files
+            ["cpython/cp_pfdr_d1_ql1b.cpp", "../src/cp_pfdr_d1_ql1b.cpp",
+             "../src/cut_pursuit_d1.cpp", "../src/cut_pursuit.cpp",
+             "../src/cp_graph.cpp", "../src/pfdr_d1_ql1b.cpp",
+             "../src/matrix_tools.cpp", "../src/pfdr_graph_d1.cpp", 
+             "../src/pcd_fwd_doug_rach.cpp", "../src/pcd_prox_split.cpp"],
+            include_dirs=include_dirs,
+            extra_compile_args=extra_compile_args,
+            extra_link_args=extra_link_args)
+    setup(name=name, ext_modules=[mod], cmdclass=dict(build=MyBuild))
+
+
+name = "cp_pfdr_d1_lsx_ext"
+if name in to_compile:
+    mod = Extension(
+            name,
+            # list source files
+            ["cpython/cp_pfdr_d1_lsx.cpp", "../src/cp_pfdr_d1_lsx.cpp",
+             "../src/cut_pursuit_d1.cpp", "../src/cut_pursuit.cpp",
+             "../src/cp_graph.cpp", "../src/pfdr_d1_lsx.cpp",
+             "../src/proj_simplex.cpp", "../src/pfdr_graph_d1.cpp",
+             "../src/pcd_fwd_doug_rach.cpp", "../src/pcd_prox_split.cpp"], 
+            include_dirs=include_dirs,
+            extra_compile_args=extra_compile_args,
+            extra_link_args=extra_link_args)
+    setup(name=name, ext_modules=[mod], cmdclass=dict(build=MyBuild))
 
 ###  postprocessing  ###
-shutil.rmtree("build") # remove compilation temporary products
+try:
+    shutil.rmtree("build") # remove temporary compilation products
+except FileNotFoundError:
+    pass
+
 os.chdir(tmp_work_dir) # get back to initial working directory

@@ -46,7 +46,7 @@ l1_weights = mat["l1_weights"]
 
 # ground truth support 
 x0 = mat["x0"]
-supp0 = np.array(x0 != 0, dtype ="int")
+supp0 = np.array(x0 != 0, dtype="int")
 x0min = x0.min()
 x0max = x0.max()
 vertices = mat["mesh"].item()[0]
@@ -84,7 +84,7 @@ del rX, Comp
 print("Total python wrapper execution time: {:.1f} s\n\n".format(it2-it1))
 
 ###  compute Dice scores and print results  ###
-supp = np.array(x != 0,dtype ="int")
+supp = np.array(x != 0, dtype="int")
 DS = 2*np.array((supp0+supp) == 2).sum()/(supp0.sum() + supp.sum());
 # support retrieved by discarding nonsignificant values with 2-means clustering
 abss = np.abs(x)

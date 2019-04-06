@@ -1,9 +1,9 @@
 /*=============================================================================
- * (Comp, rX, it, Obj, Time, Dif) = cp_pfdr_d1_lsx(loss, Y, first_edge,
- *      adj_vertices, edge_weights = 1.0, loss_weights = [],
- *      d1_coor_weights = [], cp_dif_tol = 1e-3, cp_it_max = 10,
- *      pfdr_rho = 1.0, pfdr_cond_min = 1e-2, pfdr_dif_rcd = 0.0,
- *      pfdr_dif_tol = 1e-3*cp_dif_tol, pfdr_it_max = 1e4, verbose = 1e2)
+ * Comp, rX, it, Obj, Time, Dif = cp_pfdr_d1_lsx_ext(
+ *          loss, Y, first_edge, adj_vertices, edge_weights, loss_weights,
+ *          d1_coor_weights, cp_dif_tol, cp_it_max, pfdr_rho, pfdr_cond_min,
+ *          pfdr_dif_rcd, pfdr_dif_tol, pfdr_it_max, verbose, real_t_double,
+ *          compute_Obj, compute_Time, compute_Dif)
  * 
  *  Baudoin Camille 2019
  *===========================================================================*/
@@ -32,13 +32,6 @@ typedef uint16_t comp_t;
 // typedef uint32_t comp_t;
 // # define COMP_CLASS NPY_UINT32
 // # define COMP_ID "uint32"
-// # define LINEAR 1.
-
-/* arrays with arguments type */
-static const int args_real_t[] = {1, 4, 5, 6};
-static const int n_real_t = 4;
-static const int args_index_t[] = {2, 3};
-static const int n_index_t = 2;
 
 /* template for handling both single and double precisions */
 template<typename real_t, NPY_TYPES pyREAL_CLASS>
@@ -162,8 +155,12 @@ static PyObject* cp_pfdr_d1_lsx_ext(PyObject* self, PyObject* args)
     int cp_it_max, pfdr_it_max, verbose, real_t_double, compute_Obj,
         compute_Time, compute_Dif;
 
-    /* parse the input, from python Object to c PyArray, double, or int type */
+    /* parse the input, from Python Object to C PyArray, double, or int type */
+#if PY_MAJOR_VERSION >= 3
     if(!PyArg_ParseTuple(args, "dOOOOOOdiddddiipppp", &loss, &py_Y,
+#else // python 2 does not accept the 'p' format specifier
+    if(!PyArg_ParseTuple(args, "dOOOOOOdiddddiiiiii", &loss, &py_Y,
+#endif
         &py_first_edge, &py_adj_vertices, &py_edge_weights, &py_loss_weights,
         &py_d1_coor_weights, &cp_dif_tol, &cp_it_max, &pfdr_rho,
         &pfdr_cond_min, &pfdr_dif_rcd, &pfdr_dif_tol, &pfdr_it_max, &verbose,
@@ -179,16 +176,10 @@ static PyObject* cp_pfdr_d1_lsx_ext(PyObject* self, PyObject* args)
             compute_Time, compute_Dif);
         return PyReturn;
     }else{ /* real_t type is float */
-        /* Recast double in float */
-        float cp_dif_tol_f = (float) cp_dif_tol;
-        float pfdr_rho_f = (float) pfdr_rho;
-        float pfdr_cond_min_f = (float) pfdr_cond_min;
-        float pfdr_dif_rcd_f = (float) pfdr_dif_rcd;
-        float pfdr_dif_tol_f = (float) pfdr_dif_tol;
         PyObject* PyReturn = cp_pfdr_d1_lsx<float, NPY_FLOAT32>(loss, py_Y,
             py_first_edge, py_adj_vertices, py_edge_weights, py_loss_weights,
-            py_d1_coor_weights, cp_dif_tol_f, cp_it_max, pfdr_rho_f,
-            pfdr_cond_min_f, pfdr_dif_rcd_f, pfdr_dif_tol_f, pfdr_it_max,
+            py_d1_coor_weights, cp_dif_tol, cp_it_max, pfdr_rho,
+            pfdr_cond_min, pfdr_dif_rcd, pfdr_dif_tol, pfdr_it_max,
             verbose, compute_Obj, compute_Time, compute_Dif);
         return PyReturn;
     }
@@ -200,9 +191,9 @@ static PyMethodDef cp_pfdr_d1_lsx_methods[] = {
     {NULL, NULL, 0, NULL}
 }; 
 
-#if PY_MAJOR_VERSION >= 3
 /* module initialization */
-/* Python version 3*/
+#if PY_MAJOR_VERSION >= 3
+/* Python version 3 */
 static struct PyModuleDef cp_pfdr_d1_lsx_module = {
     PyModuleDef_HEAD_INIT,
     "cp_pfdr_d1_lsx_ext", /* name of module */

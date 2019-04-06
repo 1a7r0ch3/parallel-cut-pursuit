@@ -166,7 +166,7 @@ The reduced problem amounts to averaging, and the split step uses _k_-means++ al
 
 When the loss is quadratic, the resulting problem is sometimes coined “minimal partition problem”.  
 
-An example with the smoothed Kullback–Leibler is provided with [GNU Octave or Matlab](#gnu-octave-or-matlab) and [Python](#python) interfaces, on a task of _spatial regularization of semantic classification of a 3D point cloud_.  
+An example with the smoothed Kullback–Leibler is provided with [GNU Octave or Matlab](#gnu-octave-or-matlab) interface, on a task of _spatial regularization of semantic classification of a 3D point cloud_.  
 
 ### Directory tree
     .   
@@ -186,8 +186,9 @@ Requires `C++11`.
 The C++ classes are documented within the corresponding headers in `include/`.  
 
 ### GNU Octave or Matlab
-See the script `compile_mex.m` for typical compilation commands.  
-The MEX interfaces are documented within dedicated `.m` files in `octave/doc/`.  
+See the script `compile_mex.m` for typical compilation commands; on UNIX systems, it can be run directly from the GNU Octave of Matlab interpreter.  
+
+Extensive documention of the MEX interfaces can be found within dedicated `.m` files in `octave/doc/`.  
 
 The script `example_EEG.m` exemplifies the use of [`Cp_d1_ql1b`](#specialization-Cp_d1_ql1b-quadratic-functional-ℓ1-norm-bounds-and-graph-total-variation), on a task of _brain source identification from electroencephalography_.  
 
@@ -197,10 +198,11 @@ The scripts `example_labeling_3D.m` and `example_labeling_3D_d0.m` exemplify the
 
 ### Python
 Requires `numpy` package.  
-See the script `setup.py` for compiling modules with `distutils`;
-currently, the wrappers assume the libraries are built in a `python/bin/` directory, which can be ensured using `python setup.py build_ext --build-lib='bin'`.  
+See the script `setup.py` for compiling modules with `distutils`; on UNIX systems, it can be directly interpreted as `python setup.py build_ext`.  
+Compatible with Python 2 and Python 3.  
 
-The python interfaces are documented within corresponding `.py` files in `python/wrappers/`.  
+Extensive documention of the Python wrappers can be found in the corresponding `.py` files.  
+The scripts are mostly written for Python 3, and should work with Python 2 with minor tweaking.
 
 The script `example_EEG.py` exemplifies the use of [`Cp_d1_ql1b`](#specialization-Cp_d1_ql1b-quadratic-functional-ℓ1-norm-bounds-and-graph-total-variation), on a task of _brain source identification from electroencephalography_.  
 
