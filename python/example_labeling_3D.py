@@ -11,7 +11,6 @@ import os
 import numpy as np
 import scipy.io
 import time
-import matplotlib.pyplot as plt
 
 os.chdir(os.path.realpath(os.path.dirname(__file__)))
 sys.path.append(os.path.join(os.path.realpath(os.path.dirname(__file__)), 
@@ -80,4 +79,4 @@ for k in range(1,len(classNames)+1):
     F1[k-1] = 2*np.array((predk+truek)==2).sum()/(predk.sum() + truek.sum())
 print(("\naverage F1 of spatially regularized prediction: "
        "{:.2f}\n\n").format(F1.mean()))
-del predk, truek
+del predk, truevk
