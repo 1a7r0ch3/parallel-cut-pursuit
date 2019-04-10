@@ -18,6 +18,7 @@ import re
 to_compile = [ # comment undesired extension modules
     "cp_pfdr_d1_ql1b_ext",
     "cp_pfdr_d1_lsx_ext",
+    "cp_kmpp_d0_dist_ext"
 ]
 include_dirs = [numpy.get_include()] # find the Numpy headers
 # compilation and linkage options
@@ -36,6 +37,7 @@ def purge(dir, pattern):
     for f in os.listdir(dir):
         if re.search(pattern, f):
             os.remove(os.path.join(dir, f))
+
 
 ###  preprocessing  ###
 # ensure right working directory
@@ -73,6 +75,20 @@ if name in to_compile:
              "../src/cp_graph.cpp", "../src/pfdr_d1_lsx.cpp",
              "../src/proj_simplex.cpp", "../src/pfdr_graph_d1.cpp",
              "../src/pcd_fwd_doug_rach.cpp", "../src/pcd_prox_split.cpp"], 
+            include_dirs=include_dirs,
+            extra_compile_args=extra_compile_args,
+            extra_link_args=extra_link_args)
+    setup(name=name, ext_modules=[mod], cmdclass=dict(build=MyBuild))
+
+
+name = "cp_kmpp_d0_dist_ext"
+if name in to_compile:
+    mod = Extension(
+            name,
+            # list source files
+            ["cpython/cp_kmpp_d0_dist.cpp", "../src/cp_kmpp_d0_dist.cpp",
+             "../src/cut_pursuit_d0.cpp", "../src/cut_pursuit.cpp",
+             "../src/cp_graph.cpp"], 
             include_dirs=include_dirs,
             extra_compile_args=extra_compile_args,
             extra_link_args=extra_link_args)

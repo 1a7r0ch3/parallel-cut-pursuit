@@ -15,7 +15,8 @@ def cp_pfdr_d1_lsx(loss, Y, first_edge, adj_vertices, edge_weights=None,
             loss, Y, first_edge, adj_vertices, edge_weights=None,
             loss_weights=None, d1_coor_weights=None, cp_dif_tol=1e-3,
             cp_it_max=10, pfdr_rho=1.0, pfdr_cond_min=1e-2, pfdr_dif_rcd=0.0,
-            pfdr_dif_tol=1e-3*cp_dif_tol, pfdr_it_max=1e4, verbose=1e2)
+            pfdr_dif_tol=1e-3*cp_dif_tol, pfdr_it_max=1e4, verbose=1e2, 
+            compute_Obj=False, compute_Time=False, compute_Dif=False)
 
     Cut-pursuit algorithm with d1 (total variation) penalization, with a 
     separable loss term and simplex constraints:
@@ -59,6 +60,7 @@ def cp_pfdr_d1_lsx(loss, Y, first_edge, adj_vertices, edge_weights=None,
     hence this loss is actually equivalent to cross-entropy.
 
     INPUTS: real numeric type is either float32 or float64, not both;
+            indices numeric type is uint32.
 
     NOTA: by default, components are identified using uint16_t identifiers; 
     this can be easily changed in the wrapper source if more than 65535
@@ -194,7 +196,7 @@ def cp_pfdr_d1_lsx(loss, Y, first_edge, adj_vertices, edge_weights=None,
             [Y, edge_weights, loss_weights, d1_coor_weights]):
         if ar_args.dtype != real_t:
             raise TypeError("argument '{0}' must be of type '{1}'"
-                            .format(name, real_t)
+                            .format(name, real_t))
 
     # Check fortran continuity of all numpy.array arguments of type float (Y,
     # first_edge, adj_vertices, edge_weights, loss_weights, d1_coor_weights)
@@ -208,6 +210,7 @@ def cp_pfdr_d1_lsx(loss, Y, first_edge, adj_vertices, edge_weights=None,
 
     # Convert in float64 all float arguments if needed (cp_dif_tol, pfdr_rho,
     # pfdr_cond_min, pfdr_dif_rcd, pfdr_dif_tol) 
+    loss = float(loss)
     if pfdr_dif_tol is None:
         pfdr_dif_tol = cp_dif_tol*1e-3
     cp_dif_tol = float(cp_dif_tol)

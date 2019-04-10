@@ -46,6 +46,7 @@ def cp_pfdr_d1_ql1b(Y, A, first_edge, adj_vertices, edge_weights=None,
     (see below) with Y <- DDy = My and A <- D2 = M.
 
     INPUTS: real numeric type is either float32 or float64, not both;
+            indices numeric type is uint32.
 
     NOTA: by default, components are identified using uint16_t identifiers; 
     this can be easily changed in the wrapper source if more than 65535
@@ -246,7 +247,7 @@ def cp_pfdr_d1_ql1b(Y, A, first_edge, adj_vertices, edge_weights=None,
      
     # Convert all int arguments (cp_it_max, pfdr_it_max, verbose) in ints: 
     cp_it_max = int(cp_it_max)
-    pfrd_it_max = int(pfdr_it_max)
+    pfdr_it_max = int(pfdr_it_max)
     verbose = int(verbose)
 
     # Check type of all booleen arguments (AtA_if_square, compute_Obj,
@@ -256,6 +257,8 @@ def cp_pfdr_d1_ql1b(Y, A, first_edge, adj_vertices, edge_weights=None,
             [AtA_if_square, compute_Obj, compute_Time, compute_Dif]):
         if type(b_args) != bool:
             raise TypeError("argument '{0}' must be boolean".format(name))
+
+    print(type(Y), type(A), type(first_edge), type(adj_vertices), type(edge_weights), type(Yl1), type(l1_weights), type(low_bnd), type(upp_bnd), type(cp_dif_tol), type(cp_it_max), type(pfdr_rho), type(pfdr_cond_min), type(pfdr_dif_rcd), type(pfdr_dif_tol), type(pfdr_it_max), type(verbose), type(AtA_if_square), type(real_t == "float64"), type(compute_Obj), type(compute_Time), type(compute_Dif)) 
 
     # Call wrapper python in C  
     Comp, rX, it, Obj, Time, Dif = cp_pfdr_d1_ql1b_ext(

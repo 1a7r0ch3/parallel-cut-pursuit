@@ -1,9 +1,14 @@
-  #------------------------------------------------------------------------#
-  #  script for illustrating cp_pfdr_d1_lsx on labeling of 3D point cloud  #
-  #------------------------------------------------------------------------#
-# Reference: H. Raguet and L. Landrieu, Cut-Pursuit Algorithm for Regularizing
-# Nonsmooth Functionals with Graph Total Variation, International Conference on
-# Machine Learning, PMLR, 2018, 80, 4244-4253
+  #-------------------------------------------------------------------------%
+  #  script for illustrating cp_kmpp_d0_dist on labeling of 3D point cloud  %
+  #-------------------------------------------------------------------------%
+# References:
+# L. Landrieu and G. Obozinski, Cut Pursuit: fast algorithms to learn
+# piecewise constant functions on general weighted graphs, SIAM Journal on
+# Imaging Science, 10(4):1724-1766, 2017
+#
+# L. Landrieu et al., A structured regularization framework for spatially
+# smoothing semantic labelings of 3D point clouds, ISPRS Journal of
+# Photogrammetry and Remote Sensing, 132:102-118, 2017
 #
 # Camille Baudoin 2019
 import sys
@@ -18,22 +23,21 @@ sys.path.append(os.path.join(os.path.realpath(os.path.dirname(__file__)),
 sys.path.append(os.path.join(os.path.realpath(os.path.dirname(__file__)), 
                                               "wrappers"))
 
-from cp_pfdr_d1_lsx import cp_pfdr_d1_lsx 
+from cp_kmpp_d0_dist import cp_kmpp_d0_dist 
 
 ###  classes involved in the task  ###
 classNames = ["road", "vegetation", "facade", "hardscape",
         "scanning artifacts", "cars"]
 classId = np.arange(1, 7, dtype="uint8")
 
-###  parameters; see documentation of cp_pfdr_d1_lsx.py  ###
+###  parameters; see octave/doc/cp_pfdr_d1_lsx_mex.m  ###
 cp_dif_tol = 1e-3
 cp_it_max = 10
-pfdr_rho = 1.5
-pfdr_cond_min = 1e-2
-pfdr_dif_rcd = 0
-pfdr_dif_tol = 1e-3*cp_dif_tol
-pfdr_it_max = 1e4
-pfdr_verbose = 1e2
+K = 2
+split_iter_num = 2
+kmpp_init_num = 3
+kmpp_iter_num = 3
+verbose = 1
 
 ###  initialize data  ###
 # For details on the data and parameters, see H. Raguet, A Note on the
@@ -47,6 +51,8 @@ ground_truth = mat["ground_truth"]
 first_edge = mat["first_edge"]
 adj_vertices = mat["adj_vertices"]
 
+homo_d0_weight = 3*homo_d1_weight; # adjusted for d1 norm by trial-and-error
+
 # compute prediction performance of random forest
 ML = np.argmax(y, axis=0)+1
 F1 = np.zeros(len(classNames),)
@@ -58,13 +64,13 @@ print("\naverage F1 of random forest prediction: {:.2f}\n\n".format(F1.mean()))
 del predk, truek
 
 ###  solve the optimization problem  ###
-loss_weights = np.array([], dtype="float32")
-d1_coor_weights = np.array([], dtype="float32")
+vert_weights = np.array([], dtype="float32")
+coor_weights = np.array([], dtype="float32")
 it1 = time.time()
-Comp, rX, it = cp_pfdr_d1_lsx(
-        loss, y, first_edge, adj_vertices, homo_d1_weight, loss_weights,
-        d1_coor_weights, cp_dif_tol, cp_it_max, pfdr_rho, pfdr_cond_min,
-        pfdr_dif_rcd, pfdr_dif_tol, pfdr_it_max, pfdr_verbose)
+Comp, rX, it = cp_kmpp_d0_dist(
+        loss, y, first_edge, adj_vertices, homo_d0_weight, vert_weights, 
+        coor_weights, cp_dif_tol, cp_it_max, K, split_iter_num, kmpp_init_num,
+        kmpp_iter_num, verbose)
 it2 = time.time()
 x = rX[:,Comp] # rX is components values, Comp is components assignment
 del Comp, rX
@@ -79,4 +85,4 @@ for k in range(1,len(classNames)+1):
     F1[k-1] = 2*np.array((predk+truek)==2).sum()/(predk.sum() + truek.sum())
 print(("\naverage F1 of spatially regularized prediction: "
        "{:.2f}\n\n").format(F1.mean()))
-del predk, truevk
+del predk, truek
