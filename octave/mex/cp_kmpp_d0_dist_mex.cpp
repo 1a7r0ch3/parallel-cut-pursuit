@@ -92,17 +92,17 @@ static void cp_kmpp_d0_dist_mex(int nlhs, mxArray **plhs, int nrhs, \
     const index_t *adj_vertices = (index_t*) mxGetData(prhs[3]);
     if (mxGetNumberOfElements(prhs[2]) != (V + 1)){
         mexErrMsgIdAndTxt("MEX", "Cut-pursuit d0 distance: "
-            "argument 3 'adj_vertices' should contain |V|+1 = %d elements, "
+            "argument 3 'first_edge' should contain |V| + 1 = %d elements, "
             "but %d are given.", (V + 1), mxGetNumberOfElements(prhs[2]));
     }
 
     /* penalizations */
-    const real_t *edge_weights =
+    const real_t* edge_weights =
         (nrhs > 4 && mxGetNumberOfElements(prhs[4]) > 1) ?
         (real_t*) mxGetData(prhs[4]) : nullptr;
     real_t homo_edge_weight =
         (nrhs > 4 && mxGetNumberOfElements(prhs[4]) == 1) ?
-        mxGetScalar(prhs[4]) : 1;
+        mxGetScalar(prhs[4]) : 1.0;
 
     real_t cp_dif_tol = (nrhs > 7) ? mxGetScalar(prhs[7]) : 1e-3;
     int cp_it_max = (nrhs > 8) ? mxGetScalar(prhs[8]) : 10;
@@ -115,7 +115,7 @@ static void cp_kmpp_d0_dist_mex(int nlhs, mxArray **plhs, int nrhs, \
     /**  prepare output; rX (plhs[1]) is created later  **/
 
     plhs[0] = mxCreateNumericMatrix(1, V, COMP_CLASS, mxREAL);
-    comp_t *Comp = (comp_t*) mxGetData(plhs[0]);
+    comp_t* Comp = (comp_t*) mxGetData(plhs[0]);
     plhs[2] = mxCreateNumericMatrix(1, 1, VERTEX_CLASS, mxREAL);
     int* it = (int*) mxGetData(plhs[2]);
 
@@ -123,7 +123,7 @@ static void cp_kmpp_d0_dist_mex(int nlhs, mxArray **plhs, int nrhs, \
         (real_t*) mxMalloc(sizeof(real_t)*(cp_it_max + 1)) : nullptr;
     double* Time = nlhs > 4 ?
         (double*) mxMalloc(sizeof(double)*(cp_it_max + 1)) : nullptr;
-    real_t *Dif = nlhs > 5 ?
+    real_t* Dif = nlhs > 5 ?
         (real_t*) mxMalloc(sizeof(double)*cp_it_max) : nullptr;
 
     /**  cut-pursuit with preconditioned forward-Douglas-Rachford  **/

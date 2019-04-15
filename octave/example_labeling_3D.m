@@ -7,7 +7,7 @@
 %
 % Hugo Raguet 2017, 2018, 2019
 cd(fileparts(which('example_labeling_3D.m')));
-addpath(genpath('./bin/'));
+addpath('bin/');
 
 %%%  classes involved in the task  %%%
 classNames = {'road', 'vegetation', 'facade', 'hardscape', ...
@@ -51,7 +51,7 @@ loss_weights = []; d1_coor_weights = [];
 time = toc;
 x = rX(:, Comp+1); % rX is components values, Comp is components assignments
 clear Comp rX;
-fprintf('Total python  wraaper execution time %.0f s\n\n', time);
+fprintf('Total MEX execution time %.0f s\n\n', time);
 
 % compute prediction performance of spatially regularized prediction
 [~, ML] = max(x, [], 1);

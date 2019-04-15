@@ -79,4 +79,4 @@ for k in range(1,len(classNames)+1):
     F1[k-1] = 2*np.array((predk+truek)==2).sum()/(predk.sum() + truek.sum())
 print(("\naverage F1 of spatially regularized prediction: "
        "{:.2f}\n\n").format(F1.mean()))
-del predk, truevk
+del predk, truek

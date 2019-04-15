@@ -5,12 +5,13 @@
 % Nonsmooth Functionals with Graph Total Variation, International Conference on
 % Machine Learning, PMLR, 2018, 80, 4244-4253
 %
-% Hugo Raguet 2017, 2018
+% Hugo Raguet 2017, 2018, 2019
 cd(fileparts(which('example_tomography.m')));
-addpath(genpath('./bin/'));
+addpath('bin/');
 
 %%%  general parameters  %%%
 printResults = true; % requires color encapsulated postscript driver on your
+                     % system
 
 %%%  parameters; see octave/doc/cp_pfdr_d1_ql1b_mex.m %%%
 cp_dif_tol = 1e-3;

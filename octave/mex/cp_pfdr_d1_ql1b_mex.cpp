@@ -30,7 +30,7 @@ typedef uint16_t comp_t;
 // # define COMP_ID "uint32"
 
 /* arrays with arguments type */
-static const int args_real_t[] = {0, 1, 4, 5, 6};
+static const int args_real_t[] = {0, 1, 4, 5, 6, 7, 8};
 static const int n_real_t = 4;
 static const int args_index_t[] = {2, 3};
 static const int n_index_t = 2;
@@ -77,12 +77,16 @@ static void cp_pfdr_d1_ql1b_mex(int nlhs, mxArray **plhs, int nrhs, \
     size_t N = mxGetM(prhs[1]);
     index_t V = mxGetN(prhs[1]);
 
-    const real_t *Y = !mxIsEmpty(prhs[0]) ?
+    if (N == 0 && V == 0){
+        mexErrMsgIdAndTxt("MEX", "Cut-pursuit d1 quadratic l1 bounds: "
+            "argument A cannot be empty.");
+    }
+
+    const real_t* Y = !mxIsEmpty(prhs[0]) ?
         (real_t*) mxGetData(prhs[0]) : nullptr;
-    const real_t *A = (N == 1 && V == 1) ?
+    const real_t* A = (N == 1 && V == 1) ?
         nullptr : (real_t*) mxGetData(prhs[1]);
-    const real_t a = (N == 1 && V == 1) ?
-        mxGetScalar(prhs[1]) : 1.0;
+    const real_t a = (N == 1 && V == 1) ?  mxGetScalar(prhs[1]) : 1.0;
 
     if (V == 1){ /* quadratic functional is only weighted square difference */
         if (N == 1){
@@ -109,7 +113,7 @@ static void cp_pfdr_d1_ql1b_mex(int nlhs, mxArray **plhs, int nrhs, \
     const index_t *adj_vertices = (index_t*) mxGetData(prhs[3]);
     if (mxGetNumberOfElements(prhs[2]) != (V + 1)){
         mexErrMsgIdAndTxt("MEX", "Cut-pursuit d1 quadratic l1 bounds: "
-            "argument 3 'adj_vertices' should contain |V|+1 = %d elements, "
+            "argument 3 'first_edge' should contain |V| + 1 = %d elements, "
             "but %d are given.", (V + 1), mxGetNumberOfElements(prhs[2]));
     }
 
@@ -119,7 +123,7 @@ static void cp_pfdr_d1_ql1b_mex(int nlhs, mxArray **plhs, int nrhs, \
         (real_t*) mxGetData(prhs[4]) : nullptr;
     real_t homo_edge_weight =
         (nrhs > 4 && mxGetNumberOfElements(prhs[4]) == 1) ?
-        mxGetScalar(prhs[4]) : 1;
+        mxGetScalar(prhs[4]) : 1.0;
 
     const real_t* Yl1 = (nrhs > 5 && !mxIsEmpty(prhs[5])) ?
         (real_t*) mxGetData(prhs[5]) : nullptr;
@@ -128,16 +132,16 @@ static void cp_pfdr_d1_ql1b_mex(int nlhs, mxArray **plhs, int nrhs, \
         (real_t*) mxGetData(prhs[6]) : nullptr;
     real_t homo_l1_weight =
         (nrhs > 6 && mxGetNumberOfElements(prhs[6]) == 1) ?
-        mxGetScalar(prhs[6]) : 0;
+        mxGetScalar(prhs[6]) : 0.0;
 
-    const real_t *low_bnd =
+    const real_t* low_bnd =
         (nrhs > 7 && mxGetNumberOfElements(prhs[7]) > 1) ?
         (real_t*) mxGetData(prhs[7]) : nullptr;
     real_t homo_low_bnd =
         (nrhs > 7 && mxGetNumberOfElements(prhs[7]) == 1) ?
         mxGetScalar(prhs[7]) : -INF_REAL;
 
-    const real_t *upp_bnd =
+    const real_t* upp_bnd =
         (nrhs > 8 && mxGetNumberOfElements(prhs[8]) > 1) ?
         (real_t*) mxGetData(prhs[8]) : nullptr;
     real_t homo_upp_bnd =
@@ -212,10 +216,8 @@ static void cp_pfdr_d1_ql1b_mex(int nlhs, mxArray **plhs, int nrhs, \
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 { 
     /* real type is determined by the first parameter Y if nonempty;
-     * or by the second parameter A if nonempty and nonscalar;
      * or by the sixth parameter Yl1 */
     if ((!mxIsEmpty(prhs[0]) && mxIsDouble(prhs[0])) ||
-        (mxGetNumberOfElements(prhs[1]) > 1 && mxIsDouble(prhs[1])) || 
         (nrhs > 5 && !mxIsEmpty(prhs[5]) && mxIsDouble(prhs[5]))){
         check_args(nrhs, prhs, args_real_t, n_real_t, mxDOUBLE_CLASS,
             "double");

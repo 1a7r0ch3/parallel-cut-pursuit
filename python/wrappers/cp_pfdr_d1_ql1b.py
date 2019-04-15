@@ -12,12 +12,12 @@ def cp_pfdr_d1_ql1b(Y, A, first_edge, adj_vertices, edge_weights=None,
                     compute_Time=False, compute_Dif=False):
     """
     Comp, rX, cp_it, Obj, Time, Dif = cp_pfdr_d1_ql1b(
-            Y, A, first_edge, adj_vertices, edge_weights=None, Yl1=None,
-            l1_weights=None, low_bnd=None, upp_bnd=None, cp_dif_tol=1e-5,
-            cp_it_max=10, pfdr_rho=1.0, pfdr_cond_min=1e-2, pfdr_dif_rcd=0.0,
-            pfdr_dif_tol=1e-3*cp_dif_tol, pfdr_it_max=int(1e4),
-            verbose=int(1e3), AtA_if_square=True, compute_Obj=False,
-            compute_Time=False, compute_Dif=False)
+            Y | AtY, A | AtA, first_edge, adj_vertices, edge_weights=None,
+            Yl1=None, l1_weights=None, low_bnd=None, upp_bnd=None,
+            cp_dif_tol=1e-5, cp_it_max=10, pfdr_rho=1.0, pfdr_cond_min=1e-2,
+            pfdr_dif_rcd=0.0, pfdr_dif_tol=1e-3*cp_dif_tol,
+            pfdr_it_max=int(1e4), verbose=int(1e3), AtA_if_square=True,
+            compute_Obj=False, compute_Time=False, compute_Dif=False)
 
     Cut-pursuit algorithm with d1 (total variation) penalization, with a 
     quadratic functional, l1 penalization and box constraints:
@@ -137,42 +137,44 @@ def cp_pfdr_d1_ql1b(Y, A, first_edge, adj_vertices, edge_weights=None,
 
     # Determine the type of float argument (real_t) 
     # real type is determined by the first parameter Y if nonempty; 
-    # or by the second parameter A if nonempty and nonscalar;
-    # or by the parameter Yl1 
-    if determine_type(Y):
-        real_t = determine_type(Y)
-    elif determine_type(A):
-        real_t = determine_type(A)
-    elif determine_type(Yl1):
-        real_t = determine_type(Yl1)
+    # or by the second parameter A is nonscalar;
+    # or by the parameter Yl1
+    if type(Yl1) == np.ndarray and Y.any():
+        real_t = Y.dtype
+    elif type(Yl1) == np.ndarray and Yl1.any():
+        real_t = Yl1.dtype
     else:
-        raise TypeError(("At least one of argument 'Y', 'A', or 'Yl1' "
-                         "must be provided"))
- 
-    # Convert in numpy array scalar entry: Y, A, first_edge adj_vertices, 
+        raise TypeError(("At least one of arguments 'Y' or 'Yl1' "
+                         "must be provided as a nonempty numpy array."))
+
+    if real_t not in ["float32", "float64"]:
+        raise TypeError(("Currently, the real numeric type must be float32 or"
+                         " float64."))
+
+    # Convert in numpy array scalar entry: Y, A, first_edge, adj_vertices, 
     # edge_weights, Yl1, l1_weights, low_bnd, upp_bnd, and define float numpy 
     # array argument with the right float type, if empty:
     if type(Y) != np.ndarray:
-        raise TypeError("argument 'Y' must be a numpy array")
+        raise TypeError("Argument 'Y' must be a (possibly empty) numpy array.")
 
     if type(A) != np.ndarray:
         if type(A) == list:
-            raise TypeError("argument 'A' must be a scalar or a numpy array")
+            raise TypeError("Argument 'A' must be a scalar or a numpy array.")
         else:
             A = np.array([A], real_t)
 
     if type(first_edge) != np.ndarray or first_edge.dtype != "uint32":
-        raise TypeError(("argument 'first_edge' must be a numpy array of "
-                         "uint32"))
+        raise TypeError(("Argument 'first_edge' must be a numpy array of "
+                         "type uint32."))
 
     if type(adj_vertices) != np.ndarray or adj_vertices.dtype != "uint32":
-        raise TypeError(("argument 'adj_vertices' must be a numpy array of "
-                         "uint32"))
+        raise TypeError(("Argument 'adj_vertices' must be a numpy array of "
+                         "type uint32."))
 
     if type(edge_weights) != np.ndarray:
         if type(edge_weights) == list:
-            raise TypeError("argument 'edge_weights' must be a scalar or a "
-                            "numpy array")
+            raise TypeError("Argument 'edge_weights' must be a scalar or a "
+                            "numpy array.")
         elif edge_weights != None:
             edge_weights = np.array([edge_weights], dtype=real_t)
         else:
@@ -180,7 +182,8 @@ def cp_pfdr_d1_ql1b(Y, A, first_edge, adj_vertices, edge_weights=None,
 
     if type(Yl1) != np.ndarray:
         if type(Yl1) == list:
-            raise TypeError("argument 'Yl1' must be a scalar or a numpy array")
+            raise TypeError("Argument 'Yl1' must be a scalar or a numpy "
+                            "array.")
         elif Yl1 != None:
             Yl1 = np.array([Yl1], dtype=real_t)
         else:
@@ -188,8 +191,8 @@ def cp_pfdr_d1_ql1b(Y, A, first_edge, adj_vertices, edge_weights=None,
 
     if type(l1_weights) != np.ndarray:
         if type(l1_weights) == list:
-            raise TypeError("argument 'l1_weights' must be a scalar or a numpy"
-                            " array")
+            raise TypeError("Argument 'l1_weights' must be a scalar or a numpy"
+                            " array.")
         elif l1_weights != None:
             l1_weights = np.array([l1_weights], dtype=real_t)
         else:
@@ -197,8 +200,8 @@ def cp_pfdr_d1_ql1b(Y, A, first_edge, adj_vertices, edge_weights=None,
 
     if type(low_bnd) != np.ndarray:
         if type(low_bnd) == list:
-            raise TypeError("argument 'low_bnd' must be a scalar or a numpy "
-                            "array")
+            raise TypeError("Argument 'low_bnd' must be a scalar or a numpy "
+                            "array.")
         elif low_bnd != None:
             low_bnd = np.array([low_bnd], dtype=real_t)
         else: 
@@ -206,8 +209,8 @@ def cp_pfdr_d1_ql1b(Y, A, first_edge, adj_vertices, edge_weights=None,
 
     if type(upp_bnd) != np.ndarray:
         if type(upp_bnd) == list:
-            raise TypeError("argument 'upp_bnd' must be a scalar or a numpy "
-                            "array")
+            raise TypeError("Argument 'upp_bnd' must be a scalar or a numpy "
+                            "array.")
         elif upp_bnd != None:
             upp_bnd = np.array([upp_bnd], dtype=real_t)
         else: 
@@ -287,17 +290,4 @@ def cp_pfdr_d1_ql1b(Y, A, first_edge, adj_vertices, edge_weights=None,
     else:
         return Comp, rX, it
 
-def determine_type(Y):
-    
-    if Y.any() and Y.dtype == "float64":
-        real_t = "float64" 
-    elif Y.any() and Y.dtype == "float32":
-        real_t = "float32" 
-    elif type(Y) == "float64":
-        real_t = "float64"
-    elif type(Y) == "float32":
-        real_t = "float32"
-    else:
-        real_t = None 
-    
-    return real_t
+

@@ -12,7 +12,7 @@
 %
 % Hugo Raguet 2019
 cd(fileparts(which('example_labeling_3D_d0.m')));
-addpath(genpath('./bin/'));
+addpath('bin/');
 
 %%%  classes involved in the task  %%%
 classNames = {'road', 'vegetation', 'facade', 'hardscape', ...

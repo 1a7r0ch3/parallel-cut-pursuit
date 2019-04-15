@@ -7,7 +7,7 @@
  *
  * where wsum(e) is the cumulative sum of the weights of all elements comparing
  * lower to e, and weight(e) is the weight associated to e.
- * The w-th element is then the element whose weighted rank interval contains w;
+ * The w-th element is the element whose weighted rank interval contains w;
  * note that if all weights are equal, the w-th element with w = n reduces
  * to the n-th element.
  *

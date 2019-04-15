@@ -66,9 +66,9 @@ static PyObject* cp_kmpp_d0_dist(real_t loss, PyArrayObject* py_Y,
     const index_t *adj_vertices = (index_t*) PyArray_DATA(py_adj_vertices);
     if (PyArray_SIZE(py_first_edge) != (V + 1)){
         std::stringstream py_err_msg;
-        py_err_msg << "Cut-pursuit d0 distance: "
-            "argument 3 'adj_vertices' should contain |V|+1 = "<< (V+1) << 
-            " elements, but "<< PyArray_SIZE(py_first_edge) <<" are given.";
+        py_err_msg << "Cut-pursuit d0 distance: argument 3 'first_edge' should"
+            " contain |V| + 1 = "<< V + 1 << " elements, but "
+            << PyArray_SIZE(py_first_edge) << " are given.";
         PyErr_SetString(PyExc_ValueError, py_err_msg.str().c_str());
     }
 

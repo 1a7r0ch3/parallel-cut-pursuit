@@ -154,7 +154,7 @@ The following loss functionals are available, where _w_<sup>(_f_)</sup> ∈ ℝ<
 Weighted quadratic: ℍ = ℝ<sup>_D_</sup> and 
 _f_(_y_, _x_) = ∑<sub>_v_ ∈ _V_</sub> _w_<sup>(_f_)</sup><sub>_v_</sub> ∑<sub>_d_ ∈ _D_</sub> _m_<sup>(_f_)</sup><sub>_d_</sub> (_x_<sub>_v_,_d_</sub> − _y_<sub>_v_,_d_</sub>)<sup>2</sup>  
 Weighted smoothed Kullback–Leibler divergence (equivalent to cross-entropy):
-ℍ = Δ<sup>_D_</sup> and  
+ℍ = Δ<sub>_D_</sub> and  
 _f_(_y_, _x_) = ∑<sub>_v_ ∈ _V_</sub> _w_<sup>(_f_)</sup><sub>_v_</sub>
 KL<sub>_m_<sup>(_f_)</sup></sub>(_α_ _u_ + (1 − _α_) _y_<sub>_v_</sub>, _α_ _u_ + (1 − _α_) _x_<sub>_v_</sub>),  
 where _α_ ∈ \]0,1\[,
@@ -183,10 +183,11 @@ An example with the smoothed Kullback–Leibler is provided with [GNU Octave or 
 
 ### C++ documentation
 Requires `C++11`.  
+Be sure to have OpenMP enabled with you compiler to enjoy parallelism.  
 The C++ classes are documented within the corresponding headers in `include/`.  
 
 ### GNU Octave or Matlab
-See the script `compile_mex.m` for typical compilation commands; on UNIX systems, it can be run directly from the GNU Octave of Matlab interpreter.  
+See the script `compile_mex.m` for typical compilation commands; it can be run directly from the GNU Octave interpreter, but Matlab users must set compilation flags directly on the command line `CXXFLAGS = ...` and `LDFLAGS = ...`.  
 
 Extensive documention of the MEX interfaces can be found within dedicated `.m` files in `octave/doc/`.  
 
@@ -206,7 +207,9 @@ The scripts are mostly written for Python 3, and should work with Python 2 with 
 
 The script `example_EEG.py` exemplifies the use of [`Cp_d1_ql1b`](#specialization-Cp_d1_ql1b-quadratic-functional-ℓ1-norm-bounds-and-graph-total-variation), on a task of _brain source identification from electroencephalography_.  
 
-The script `example_labeling_3D.py` exemplifies the use of [`Cp_d1_lsx`](#specialization-Cp_d1_lsx-separable-loss-simplex-constraints-and-graph-total-variation), on a task of _spatial regularization of semantic classification of a 3D point cloud_.  
+The script `example_tomography.py` exemplifies the use of [`Cp_d1_ql1b`](#specialization-Cp_d1_ql1b-quadratic-functional-ℓ1-norm-bounds-and-graph-total-variation), on a task of _image reconstruction from tomography_.   
+
+The scripts `example_labeling_3D.py` and `example_labeling_3D_d0.py` exemplify the use of, respectively, [`Cp_d1_lsx`](#specialization-Cp_d1_lsx-separable-loss-simplex-constraints-and-graph-total-variation) and [`Cp_d0_dist`](#specialization-Cp_d0_dist-separable-distance-and-weighted-contour-length), on a task of _spatial regularization of semantic classification of a 3D point cloud_.  
 
 ### References
 L. Landrieu and G. Obozinski, [Cut Pursuit: Fast Algorithms to Learn Piecewise Constant Functions on Weighted Graphs](http://epubs.siam.org/doi/abs/10.1137/17M1113436), 2017.  

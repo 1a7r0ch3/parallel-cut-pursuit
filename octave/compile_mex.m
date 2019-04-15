@@ -44,7 +44,7 @@ try
     clear cp_kmpp_d0_dist_mex
     %}
 
-    system('rm *.o')
+    system('rm *.o');
 catch % if an error occur, makes sure not to change the working directory
     % back to original environment
     setenv('CXXFLAGS', CXXFLAGSorig);

@@ -5,9 +5,9 @@
 % Nonsmooth Functionals with Graph Total Variation, International Conference on
 % Machine Learning, PMLR, 2018, 80, 4244-4253
 %
-% Hugo Raguet 2017, 2018
+% Hugo Raguet 2017, 2018, 2019
 cd(fileparts(which('example_EEG.m')));
-addpath(genpath('./bin/'));
+addpath('bin/');
 
 %%%  general parameters  %%%
 printResults = false; % requires color encapsulated postscript driver on your

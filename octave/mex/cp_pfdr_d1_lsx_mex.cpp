@@ -87,7 +87,7 @@ static void cp_pfdr_d1_lsx_mex(int nlhs, mxArray **plhs, int nrhs, \
     const index_t *adj_vertices = (index_t*) mxGetData(prhs[3]);
     if (mxGetNumberOfElements(prhs[2]) != (V + 1)){
         mexErrMsgIdAndTxt("MEX", "Cut-pursuit d1 loss simplex: "
-            "argument 3 'adj_vertices' should contain |V|+1 = %d elements, "
+            "argument 3 'first_edge' should contain |V| + 1 = %d elements, "
             "but %d are given.", (V + 1), mxGetNumberOfElements(prhs[2]));
     }
 
@@ -97,7 +97,7 @@ static void cp_pfdr_d1_lsx_mex(int nlhs, mxArray **plhs, int nrhs, \
         (real_t*) mxGetData(prhs[4]) : nullptr;
     real_t homo_edge_weight =
         (nrhs > 4 && mxGetNumberOfElements(prhs[4]) == 1) ?
-        mxGetScalar(prhs[4]) : 1;
+        mxGetScalar(prhs[4]) : 1.0;
     const real_t *d1_coor_weights = nrhs > 6 && !mxIsEmpty(prhs[6]) ?
         (real_t*) mxGetData(prhs[6]) : nullptr;
 
