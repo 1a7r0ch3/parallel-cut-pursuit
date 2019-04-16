@@ -35,6 +35,7 @@ TPL CP::Cp(index_t V, index_t E, const index_t* first_edge,
     /* construct graph */
     G = new Cp_graph<real_t, index_t, comp_t>(V, E);
     G->add_node(V);
+
     /* edges */
     for (index_t v = 0; v < V; v++){
         for (index_t e = first_edge[v]; e < first_edge[v + 1]; e++){

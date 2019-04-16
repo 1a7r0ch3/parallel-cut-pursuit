@@ -8,7 +8,6 @@
  *  Baudoin Camille 2019
  *===========================================================================*/
 #include <cstdint>
-#include <string>
 #include <sstream>
 #define PY_SSIZE_T_CLEAN
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
@@ -46,17 +45,18 @@ static PyObject* cp_pfdr_d1_lsx(real_t loss, PyArrayObject* py_Y,
     /**  get inputs  **/
 
     /* sizes and loss */
-    npy_intp * py_Y_size = PyArray_DIMS(py_Y);
-    size_t D = py_Y_size[0];
-    index_t V = py_Y_size[1]; 
-    const real_t *Y = (real_t*) PyArray_DATA(py_Y);
-    const real_t *loss_weights = (PyArray_SIZE(py_loss_weights) > 0) ?
+    npy_intp * py_Y_dims = PyArray_DIMS(py_Y);
+    size_t D = py_Y_dims[0];
+    index_t V = py_Y_dims[1]; 
+
+    const real_t* Y = (real_t*) PyArray_DATA(py_Y);
+    const real_t* loss_weights = (PyArray_SIZE(py_loss_weights) > 0) ?
         (real_t*) PyArray_DATA(py_loss_weights) : nullptr;
 
     /* graph structure */
     index_t E = PyArray_SIZE(py_adj_vertices);
-    const index_t *first_edge = (index_t*) PyArray_DATA(py_first_edge);
-    const index_t *adj_vertices = (index_t*) PyArray_DATA(py_adj_vertices);
+    const index_t* first_edge = (index_t*) PyArray_DATA(py_first_edge);
+    const index_t* adj_vertices = (index_t*) PyArray_DATA(py_adj_vertices);
     if (PyArray_SIZE(py_first_edge) != (V + 1)){
         std::stringstream py_err_msg;
         py_err_msg << "Cut-pursuit d1 quadratic l1 bounds: argument 3 "

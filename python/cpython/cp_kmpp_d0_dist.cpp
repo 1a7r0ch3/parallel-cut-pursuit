@@ -6,9 +6,7 @@
  * 
  *  Baudoin Camille 2019
  *===========================================================================*/
-
 #include <cstdint>
-#include <string>
 #include <sstream>
 #define PY_SSIZE_T_CLEAN
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
@@ -51,13 +49,14 @@ static PyObject* cp_kmpp_d0_dist(real_t loss, PyArrayObject* py_Y,
     /**  get inputs  **/
 
     /* sizes and loss */
-    npy_intp * py_Y_size = PyArray_DIMS(py_Y);
-    size_t D = py_Y_size[0];
-    index_t V = py_Y_size[1]; 
-    const real_t *Y = (real_t*) PyArray_DATA(py_Y);
-    const real_t *vert_weights = (PyArray_SIZE(py_vert_weights) > 0) ?
+    npy_intp* py_Y_dims = PyArray_DIMS(py_Y);
+    size_t D = PyArray_NDIM(py_Y) > 1 ? py_Y_dims[0] : 1;
+    index_t V = PyArray_NDIM(py_Y) > 1 ? py_Y_dims[1] : py_Y_dims[0];
+
+    const real_t* Y = (real_t*) PyArray_DATA(py_Y);
+    const real_t* vert_weights = (PyArray_SIZE(py_vert_weights) > 0) ?
         (real_t*) PyArray_DATA(py_vert_weights) : nullptr;
-    const real_t *coor_weights = (PyArray_SIZE(py_coor_weights) > 0) ?
+    const real_t* coor_weights = (PyArray_SIZE(py_coor_weights) > 0) ?
         (real_t*) PyArray_DATA(py_coor_weights) : nullptr;
 
     /* graph structure */

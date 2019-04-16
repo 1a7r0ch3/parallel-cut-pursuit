@@ -8,7 +8,6 @@
  *  Baudoin Camille 2019
  *===========================================================================*/
 #include <cstdint>
-#include <string>
 #include <sstream> 
 #define PY_SSIZE_T_CLEAN
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
@@ -47,9 +46,9 @@ static PyObject* cp_pfdr_d1_ql1b(PyArrayObject* py_Y,
     /**  get inputs  **/
 
     /* quadratic functional */
-    npy_intp * py_A_size = PyArray_DIMS(py_A);
-    size_t N = py_A_size[0];
-    index_t V = py_A_size[1];
+    npy_intp* py_A_dims = PyArray_DIMS(py_A);
+    size_t N = py_A_dims[0];
+    index_t V = PyArray_NDIM(py_A) > 1 ? py_A_dims[1] : 1;
 
     const real_t *Y = PyArray_SIZE(py_Y) > 0 ?
         (real_t*) PyArray_DATA(py_Y) : nullptr;

@@ -136,10 +136,8 @@ def cp_pfdr_d1_ql1b(Y, A, first_edge, adj_vertices, edge_weights=None,
     """
 
     # Determine the type of float argument (real_t) 
-    # real type is determined by the first parameter Y if nonempty; 
-    # or by the second parameter A is nonscalar;
-    # or by the parameter Yl1
-    if type(Yl1) == np.ndarray and Y.any():
+    # real type is determined by Y or Yl1
+    if type(Y) == np.ndarray and Y.any():
         real_t = Y.dtype
     elif type(Yl1) == np.ndarray and Yl1.any():
         real_t = Yl1.dtype
@@ -155,7 +153,10 @@ def cp_pfdr_d1_ql1b(Y, A, first_edge, adj_vertices, edge_weights=None,
     # edge_weights, Yl1, l1_weights, low_bnd, upp_bnd, and define float numpy 
     # array argument with the right float type, if empty:
     if type(Y) != np.ndarray:
-        raise TypeError("Argument 'Y' must be a (possibly empty) numpy array.")
+        if Y == None:
+            Y = np.array([], dtype=real_t)
+        else:
+            raise TypeError("Argument 'Y' must be a numpy array.")
 
     if type(A) != np.ndarray:
         if type(A) == list:
@@ -181,13 +182,10 @@ def cp_pfdr_d1_ql1b(Y, A, first_edge, adj_vertices, edge_weights=None,
             edge_weights = np.array([1.0], dtype=real_t)
 
     if type(Yl1) != np.ndarray:
-        if type(Yl1) == list:
-            raise TypeError("Argument 'Yl1' must be a scalar or a numpy "
-                            "array.")
-        elif Yl1 != None:
-            Yl1 = np.array([Yl1], dtype=real_t)
-        else:
+        if Yl1 == None:
             Yl1 = np.array([], dtype=real_t)
+        else:
+            raise TypeError("Argument 'Yl1' must be a numpy array.")
 
     if type(l1_weights) != np.ndarray:
         if type(l1_weights) == list:
