@@ -193,9 +193,9 @@ static void cp_pfdr_d1_ql1b_mex(int nlhs, mxArray **plhs, int nrhs, \
 
     /* copy reduced values */
     comp_t rV = cp->get_components();
-    real_t *cp_rX = cp->get_reduced_values();
+    real_t* cp_rX = cp->get_reduced_values();
     plhs[1] = mxCreateNumericMatrix(rV, 1, mxREAL_CLASS, mxREAL);
-    real_t *rX = (real_t*) mxGetData(plhs[1]);
+    real_t* rX = (real_t*) mxGetData(plhs[1]);
     for (comp_t rv = 0; rv < rV; rv++){ rX[rv] = cp_rX[rv]; }
     
     cp->set_components(0, nullptr); // prevent Comp to be free()'d

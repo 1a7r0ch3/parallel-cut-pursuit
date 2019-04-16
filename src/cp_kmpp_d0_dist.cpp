@@ -95,8 +95,7 @@ TPL void CP_D0_DIST::solve_reduced_problem()
     }
 }
 
-TPL void CP_D0_DIST::init_split_values(comp_t rv, real_t* altX,
-    comp_t* label_assign)
+TPL void CP_D0_DIST::init_split_values(comp_t rv, real_t* altX)
 {
     index_t comp_size = first_vertex[rv + 1] - first_vertex[rv];
 
@@ -158,7 +157,7 @@ TPL void CP_D0_DIST::init_split_values(comp_t rv, real_t* altX,
                 }
             }
             /* update centroids of clusters */
-            update_split_values(rv, centroids, label_assign);
+            update_split_values(rv, centroids);
         }
 
         /**  compare resulting sum of distances and keep the best one  **/
@@ -190,8 +189,7 @@ TPL void CP_D0_DIST::init_split_values(comp_t rv, real_t* altX,
     }
 }
 
-TPL void CP_D0_DIST::update_split_values(comp_t rv, real_t* altX,
-    comp_t* label_assign)
+TPL void CP_D0_DIST::update_split_values(comp_t rv, real_t* altX)
 {
     real_t* total_weights = (real_t*) malloc_check(sizeof(real_t)*K);
     for (comp_t k = 0; k < K; k++){

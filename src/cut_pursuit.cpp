@@ -12,8 +12,8 @@
 #define rVp1 ((size_t) rV + 1)
 /* specific flags */
 #define NOT_ASSIGNED MAX_NUM_COMP
+#define ASSIGNED_ROOT ((comp_t) 0)
 #define ASSIGNED ((comp_t) 1)
-#define ASSIGNED_ROOT ((comp_t) 2)
 #define NOT_SATURATED ((comp_t) 0)
 /* maximum number of edges; no edge can have this identifier */
 #define NO_EDGE (std::numeric_limits<index_t>::max())
@@ -69,7 +69,7 @@ TPL CP::~Cp()
     free(rX); free(last_rX); 
 }
 
-TPL void CP::reset_active_edges()
+TPL void CP::reset_edges()
 { for (index_t e = 0; e < E; e++){ set_inactive(e); } }
 
 TPL void CP::set_edge_weights(const real_t* edge_weights,
@@ -257,6 +257,7 @@ TPL void CP::single_connected_component()
     first_vertex = (index_t*) malloc_check(sizeof(index_t)*2);
     first_vertex[0] = 0; first_vertex[1] = V;
     for (index_t v = 0; v < V; v++){ comp_list[v] = v; }
+    rV = 1;
 }
 
 TPL void CP::new_arbitrary_connected_component(comp_t& rv, index_t& comp_size)
@@ -330,7 +331,7 @@ TPL void CP::arbitrary_connected_components()
 TPL void CP::assign_connected_components()
 {
     /* activate arcs between components */
-    #pragma omp parallel for schedule(dynamic) NUM_THREADS(E, V)
+    #pragma omp parallel for schedule(static) NUM_THREADS(E, V)
     for (index_t v = 0; v < V; v++){ /* will run along all edges */
         comp_t rv = comp_assign[v];
         for (index_t e = first_edge[v]; e < first_edge[v + 1]; e++){
@@ -531,16 +532,8 @@ TPL void CP::initialize()
         comp_list = (index_t*) malloc_check(sizeof(index_t)*V);
     }
 
-    bool arbitrary = rV == 0;
-    /* E/100 is an heuristic ensuring that it is worth parallelizing */
-    if (arbitrary){ rV = compute_num_threads(E/100); }
-
-    if (rV == 1){
-        single_connected_component();
-    }else{
-        if (arbitrary){ arbitrary_connected_components(); }
-        else{ assign_connected_components(); }
-    }
+    if (rV > 1){ assign_connected_components(); }
+    else{ single_connected_component(); }
 
     last_rV = 0;
     for (comp_t rv = 0; rv < rV; rv++){ set_saturation(rv, false); }
@@ -550,6 +543,53 @@ TPL void CP::initialize()
     rX = (value_t*) malloc_check(sizeof(value_t)*D*rV);
     solve_reduced_problem();
     merge();
+}
+
+TPL uintmax_t CP::maxflow_complexity()
+{ return (uintmax_t) 2*E + V; }
+
+TPL index_t CP::split()
+{
+    index_t activation = 0;
+
+    /**  refine components in parallel  **/
+    #pragma omp parallel NUM_THREADS(split_complexity(), rV) \
+        reduction(+:activation)
+    {
+        Cp_graph<real_t, index_t, comp_t>* Gpar = get_parallel_flow_graph();
+
+        #pragma omp for schedule(dynamic)
+        for (comp_t rv = 0; rv < rV; rv++){
+            if (is_saturated(rv)){ continue; }
+            index_t rv_activation = 0;
+
+            split_component(Gpar, rv);
+
+            /* activate edges correspondingly */
+            for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
+                index_t v = comp_list[i];
+                for (index_t e = first_edge[v]; e < first_edge[v + 1]; e++){
+                    if (!is_active(e) &&
+                        label_assign[v] != label_assign[adj_vertices[e]]){
+                        set_active(e);
+                        rv_activation++;
+                    }
+                }
+            }
+
+            set_saturation(rv, rv_activation == 0);
+            activation += rv_activation;
+
+            /* reconstruct comp_assign */
+            for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
+                comp_assign[comp_list[i]] = rv;
+            }
+        }
+
+        delete Gpar;
+    } // end parallel region
+
+    return activation;
 }
 
 TPL void CP::merge_components(comp_t& ru, comp_t& rv)
@@ -591,11 +631,11 @@ TPL index_t CP::merge()
 
     /**  compare previous iterate and final assignment, and flag nonevolving
      **  components as saturated (to prevent repeated split-and-merge)  **/
-    comp_t* saturation_flag = merge_chains_leaf; // reuse storage
+    comp_t* saturation_flag = merge_chains_leaf; // reuse storage,last_rV <= rV
     if (last_rV){ // previous assignment available
         /* a previous component is nonevolving if it can be assigned a unique
          * final component */
-        for (comp_t last_rv = 0; last_rv < last_rV; last_rv++){ //last_rV <= rV
+        for (comp_t last_rv = 0; last_rv < last_rV; last_rv++){
             saturation_flag[last_rv] = NOT_ASSIGNED;
         }
         for (comp_t ru = 0; ru < rV; ru++){
@@ -715,7 +755,7 @@ TPL index_t CP::merge()
 
     /* deactivate corresponding edges */
     index_t deactivation = 0;
-    #pragma omp parallel for schedule(dynamic) NUM_THREADS(E, V)
+    #pragma omp parallel for schedule(static) NUM_THREADS(E, V)
     for (index_t v = 0; v < V; v++){ /* will run along all edges */
         comp_t rv = comp_assign[v];
         for (index_t e = first_edge[v]; e < first_edge[v + 1]; e++){

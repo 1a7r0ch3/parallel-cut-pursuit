@@ -325,7 +325,7 @@ TPL void CP_GRAPH::process_source_orphan(node *i)
 				if (a0->sister->r_cap > ZERO) set_active(j);
 				if (a!=TERMINAL && a!=ORPHAN && a->head==i)
 				{
-					set_orphan_rear(j); // add j to the end of the adoption list
+                    set_orphan_rear(j); // add j to the end of adoption list
 				}
 			}
 		}

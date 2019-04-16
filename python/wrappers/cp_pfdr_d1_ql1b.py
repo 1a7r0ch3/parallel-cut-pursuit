@@ -139,7 +139,7 @@ def cp_pfdr_d1_ql1b(Y, A, first_edge, adj_vertices, edge_weights=None,
     # real type is determined by the first parameter Y if nonempty; 
     # or by the second parameter A is nonscalar;
     # or by the parameter Yl1
-    if type(Yl1) == np.ndarray and Y.any():
+    if type(Y) == np.ndarray and Y.any():
         real_t = Y.dtype
     elif type(Yl1) == np.ndarray and Yl1.any():
         real_t = Yl1.dtype

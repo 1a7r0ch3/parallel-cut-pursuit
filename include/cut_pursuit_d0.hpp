@@ -66,21 +66,19 @@ protected:
     real_t compute_objective() override;
 
     /**  greedy splitting  **/
+    void split_component(comp_t rv) override;
 
     comp_t K; // number of alternative values in the split
     int split_iter_num; // number of partition-and-update iterations
 
     /* manage alternative values for a given component;
      * altX is a D-by-K array containing alternatives;
-     * label_assign indicates the prefered alternative value for each vertex;
      * initialize usually with k-means;
      * update usually use some kind of averaging, and must flag in some way
      * alternative values which are no longer competing (i.e. associated to no
      * vertex), which can be checked with is_split_value */
-    virtual void init_split_values(comp_t rv, value_t* altX,
-        comp_t* label_assign) = 0;
-    virtual void update_split_values(comp_t rv, value_t* altX,
-        comp_t* label_assign) = 0;
+    virtual void init_split_values(comp_t rv, value_t* altX) = 0;
+    virtual void update_split_values(comp_t rv, value_t* altX) = 0;
     virtual bool is_split_value(value_t altX) = 0;
 
     /**  merging components  **/
@@ -126,7 +124,7 @@ protected:
 
     /* rough estimate of the number of operations for updating all candidates;
      * useful for estimating the number of parallel threads */
-    virtual size_t update_merge_complexity() = 0;
+    virtual uintmax_t update_merge_complexity() = 0;
 
     /* accept the given merge candidate;
      * the root of the resulting chain will be the component in the chains

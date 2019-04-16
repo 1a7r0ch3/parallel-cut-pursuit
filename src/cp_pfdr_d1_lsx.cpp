@@ -140,16 +140,17 @@ TPL void CP_D1_LSX::solve_reduced_problem()
     }
 }
 
+TPL uintmax_t CP_D1_LSX::split_complexity()
+{ return (uintmax_t) (D - 1)*(2*V + 5*E); }
+
 TPL index_t CP_D1_LSX::split()
 {
-    index_t activation = 0;
-    real_t* grad = (real_t*) malloc_check(sizeof(real_t)*D*V);
+    grad = (real_t*) malloc_check(sizeof(real_t)*D*V);
 
-    /**  gradient of differentiable part  **/ 
     const real_t c = (ONE - loss), q = loss/D, r = q/c; // useful for KLs
     #pragma omp parallel for schedule(static) NUM_THREADS(V*D + 2*E*D, V)
     for (index_t v = 0; v < V; v++){
-        /* loss term */
+        /* differentiable loss term */
         size_t vd = v*D;
         size_t rvd = comp_assign[v]*D;
         for (size_t d = 0; d < D; d++){
@@ -183,139 +184,99 @@ TPL index_t CP_D1_LSX::split()
         }
     }
 
+    CP::split();
+
+    free(grad);
+}
+
+TPL void CP_D1_LSX::split_component(comp_t rv)
+{
     /**  directions are searched in the set \prod_v Dv, where for each vertex,
      * Dv = {1d - 1dmv in R^D | d in {1,...,D}}, with dmv in argmax_d' {x_vd'}
      * that is to say dmv is a coordinate with maximum value, and it is tested
      * against all alternative coordinates; an approximate solution is
      * searched with one alpha-expansion cycle  **/
 
-    /* best ascent coordinates stored temporarily in array 'comp_assign' */
-    comp_t* best_d = comp_assign;
+    /* find coordinate with maximum value */
+    comp_t dmv = 0;
+    real_t* rXv = rX + rv*D;
+    real_t max = rXv[0];
+    for (comp_t d = 1; d < D; d++){ if (rXv[d] > max){ max = rXv[dmv = d]; } }
 
-    /**  set capacities and compute min cuts in parallel along components  **/
-    #pragma omp parallel NUM_THREADS((D - 1)*(2*V + 5*E), rV)
-    {
+    /* initialize best ascent coordinate at the coordinate with maximum
+     * value, corresponding to a null descent direction (1dmv - 1dmv) */
+    for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
+        label_assign[comp_list[i]] = dmv;
+    }
 
-    Cp_graph<real_t, index_t, comp_t>* Gpar = get_parallel_flow_graph();
+    /* iterate over all D - 1 alternative ascent coordinates */
+    for (comp_t d_alt = 1; d_alt < D; d_alt++){
+        /* actual ascent direction */
+        comp_t d = d_alt == dmv ? 0 : d_alt;
 
-    #pragma omp for schedule(dynamic) reduction(+:activation)
-    for (comp_t rv = 0; rv < rV; rv++){
-        if (is_saturated(rv)){ continue; }
-        index_t rv_activation = 0;
-
-        /* find coordinate with maximum value */
-        comp_t dmv = 0;
-        real_t* rXv = rX + rv*D;
-        real_t max = rXv[0];
-        for (comp_t d = 1; d < D; d++){
-            if (rXv[d] > max){ max = rXv[dmv = d]; }
-        }
-
-        /* initialize best ascent coordinate at the coordinate with maximum
-         * value, corresponding to a null descent direction (1dmv - 1dmv) */
-        for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
-            best_d[comp_list[i]] = dmv;
-        }
-
-        /* iterate over all D - 1 alternative ascent coordinates */
-        for (comp_t d_alt = 1; d_alt < D; d_alt++){
-
-            /* actual ascent direction */
-            comp_t d = d_alt == dmv ? 0 : d_alt;
-
-            /* set the source/sink capacities */
-            for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
-                index_t v = comp_list[i];
-                real_t* gradv = grad + v*D;
-                /* unary cost for changing current dir_v to 1d - 1dmv */
-                set_term_capacities(v, gradv[d] - gradv[best_d[v]]);
-            }
-
-            /* set d1 edge capacities within each component;
-             * strictly speaking, active edges should not be directly ignored,
-             * because as mentioned above, _some_ neighboring coordinates can
-             * still be equal, yielding nondifferentiability and thus
-             * corresponding to positive capacities; however, such capacities
-             * are somewhat cumbersome to compute, and more importantly max
-             * flows cannot be easily computed in parallel, since the
-             * components would not be independent anymore;
-             * we thus stick with the current heuristic for now */
-            for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
-                index_t u = comp_list[i];
-                for (index_t e = first_edge[u]; e < first_edge[u + 1]; e++){
-                    if (is_active(e)){ continue; }
-                    index_t v = adj_vertices[e];
-                    /* horizontal and source/sink capacities are modified 
-                     * according to Kolmogorov & Zabih (2004); in their
-                     * notations, functional E(u,v) is decomposed as
-                     *
-                     * E(0,0) | E(0,1)    A | B
-                     * --------------- = -------
-                     * E(1,0) | E(1,1)    C | D
-                     *                         0 | 0      0 | D-C    0 |B+C-A-D
-                     *                 = A + --------- + -------- + -----------
-                     *                       C-A | C-A    0 | D-C    0 |   0
-                     *
-                     *            constant +      unary terms     + binary term
-                     */
-                    /* current ascent coordinate */
-                    comp_t du = best_d[u];
-                    comp_t dv = best_d[v];
-                    /* A = E(0,0) is the cost of the current ascent coords */
-                    real_t A = du == dv ? ZERO : EDGE_WEIGHTS_(e)
-                        *(COOR_WEIGHTS_(du) + COOR_WEIGHTS_(dv));
-                    /* B = E(0,1) is the cost of changing dv to d */
-                    real_t B = du == d ? ZERO : EDGE_WEIGHTS_(e)
-                        *(COOR_WEIGHTS_(du) + COOR_WEIGHTS_(d));
-                    /* C = E(1,0) is the cost of changing du to d */
-                    real_t C = dv == d ? ZERO : EDGE_WEIGHTS_(e)
-                        *(COOR_WEIGHTS_(dv) + COOR_WEIGHTS_(d));
-                    /* D = E(1,1) = 0 is for changing both du and dv to d */
-                    /* set weights in accordance with orientation u -> v */
-                    add_term_capacities(u, C - A);
-                    add_term_capacities(v, -C);
-                    set_edge_capacities(e, B + C - A, ZERO);
-                }
-            }
-
-            /* find min cut and update best ascent coordinates accordingly */
-            Gpar->maxflow(first_vertex[rv + 1] - first_vertex[rv],
-                comp_list + first_vertex[rv]);
-            
-            for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
-                index_t v = comp_list[i];
-                if (is_sink(v)){ best_d[v] = d; }
-            }
-
-        } // end for d_alt
-
-        /* activate edges correspondingly */
+        /* set the source/sink capacities */
         for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
             index_t v = comp_list[i];
-            for (index_t e = first_edge[v]; e < first_edge[v + 1]; e++){
-                if (!is_active(e) && best_d[v] != best_d[adj_vertices[e]]){
-                    set_active(e);
-                    rv_activation++;
-                }
+            real_t* gradv = grad + v*D;
+            /* unary cost for changing current dir_v to 1d - 1dmv */
+            set_term_capacities(v, gradv[d] - gradv[label_assign[v]]);
+        }
+
+        /* set d1 edge capacities within each component;
+         * strictly speaking, active edges should not be directly ignored,
+         * because _some_ neighboring coordinates can still be equal, yielding
+         * nondifferentiability and thus corresponding to positive capacities;
+         * however, such capacities are somewhat cumbersome to compute, and 
+         * more importantly max flows cannot be easily computed in parallel,
+         * since the components would not be independent anymore;
+         * we thus stick with the current heuristic for now */
+        for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
+            index_t u = comp_list[i];
+            for (index_t e = first_edge[u]; e < first_edge[u + 1]; e++){
+                if (is_active(e)){ continue; }
+                index_t v = adj_vertices[e];
+                /* horizontal and source/sink capacities are modified 
+                 * according to Kolmogorov & Zabih (2004); in their
+                 * notations, functional E(u,v) is decomposed as
+                 *
+                 * E(0,0) | E(0,1)    A | B
+                 * --------------- = -------
+                 * E(1,0) | E(1,1)    C | D
+                 *                         0 | 0      0 | D-C    0 |B+C-A-D
+                 *                 = A + --------- + -------- + -----------
+                 *                       C-A | C-A    0 | D-C    0 |   0
+                 *
+                 *            constant +      unary terms     + binary term
+                 */
+                /* current ascent coordinate */
+                comp_t du = label_assign[u];
+                comp_t dv = label_assign[v];
+                /* A = E(0,0) is the cost of the current ascent coords */
+                real_t A = du == dv ? ZERO : EDGE_WEIGHTS_(e)
+                    *(COOR_WEIGHTS_(du) + COOR_WEIGHTS_(dv));
+                /* B = E(0,1) is the cost of changing dv to d */
+                real_t B = du == d ? ZERO : EDGE_WEIGHTS_(e)
+                    *(COOR_WEIGHTS_(du) + COOR_WEIGHTS_(d));
+                /* C = E(1,0) is the cost of changing du to d */
+                real_t C = dv == d ? ZERO : EDGE_WEIGHTS_(e)
+                    *(COOR_WEIGHTS_(dv) + COOR_WEIGHTS_(d));
+                /* D = E(1,1) = 0 is for changing both du and dv to d */
+                /* set weights in accordance with orientation u -> v */
+                add_term_capacities(u, C - A);
+                add_term_capacities(v, -C);
+                set_edge_capacities(e, B + C - A, ZERO);
             }
         }
 
-        set_saturation(rv, rv_activation == 0);
-        activation += rv_activation;
-
-        /* reconstruct comp_assign */
+        /* find min cut and update best ascent coordinates accordingly */
+        Gpar->maxflow(first_vertex[rv + 1] - first_vertex[rv], comp_list +
+            first_vertex[rv]);
+        
         for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
-            comp_assign[comp_list[i]] = rv;
+            index_t v = comp_list[i];
+            if (is_sink(v)){ label_assign[v] = d; }
         }
-
-    } // end for rv
-
-    delete Gpar;
-
-    } // end parallel region
-
-    free(grad);
-    return activation;
+    } // end for d_alt
 }
 
 TPL real_t CP_D1_LSX::compute_evolution(bool compute_dif)

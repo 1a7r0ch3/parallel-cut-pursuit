@@ -174,7 +174,7 @@ An example with the smoothed Kullback–Leibler is provided with [GNU Octave or 
     ├── include/      C++ headers, with some doc  
     ├── octave/       GNU Octave or Matlab code  
     │   ├── doc/      some documentation  
-    │   └── mex/      MEX C interfaces
+    │   └── mex/      MEX C++ interfaces
     ├── python/       Python code  
     │   ├── cpython/  C Python interfaces  
     │   └── wrappers/ python wrappers and documentation  

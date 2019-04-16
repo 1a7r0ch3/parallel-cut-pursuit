@@ -123,10 +123,8 @@ private:
 
     real_t component_average(comp_t rv, real_t* avgXv);
 
-    void init_split_values(comp_t rv, real_t* altX, comp_t* label_assign)
-        override; // k-means ++
-    void update_split_values(comp_t rv, real_t* altX, comp_t* label_assign)
-        override; // weighted average
+    void init_split_values(comp_t rv, real_t* altX) override; // k-means ++
+    void update_split_values(comp_t rv, real_t* altX) override; // average
     bool is_split_value(real_t altX) override; // flag with infinity
 
     /**  merging components **/
@@ -173,6 +171,7 @@ private:
     using Cp<real_t, index_t, comp_t>::rV;
     using Cp<real_t, index_t, comp_t>::rE;
     using Cp<real_t, index_t, comp_t>::comp_assign;
+    using Cp<real_t, index_t, comp_t>::label_assign;
     using Cp<real_t, index_t, comp_t>::comp_list;
     using Cp<real_t, index_t, comp_t>::first_vertex;
     using Cp<real_t, index_t, comp_t>::reduced_edge_weights;

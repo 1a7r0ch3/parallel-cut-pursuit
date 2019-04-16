@@ -351,8 +351,7 @@ TPL void CP_D1_QL1B::solve_reduced_problem()
 
 TPL index_t CP_D1_QL1B::split()
 {
-    index_t activation = 0;
-    real_t* grad = (real_t*) malloc_check(sizeof(real_t)*V);
+    grad = (real_t*) malloc_check(sizeof(real_t)*V);
     for (index_t v = 0; v < V; v++){ grad[v] = ZERO; }
 
     /**  gradient of quadratic term  **/ 
@@ -417,138 +416,103 @@ TPL index_t CP_D1_QL1B::split()
         }
     }
 
-    /**  set capacities and compute min cuts in parallel along components  **/
-    #pragma omp parallel NUM_THREADS(2*V + 5*E, rV)
-    {
-
-    Cp_graph<real_t, index_t, comp_t>* Gpar = get_parallel_flow_graph();
-
-    #pragma omp for schedule(dynamic) reduction(+:activation)
-    for (comp_t rv = 0; rv < rV; rv++){
-        if (is_saturated(rv)){ continue; }
-        index_t rv_activation = 0;
-
-        /**  first cut: directions +1_U  **/
-
-        /* set the source/sink capacities */
-        for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
-            index_t v = comp_list[i];
-            set_term_capacities(v, grad[v]);
-        }
-        /* l1 contribution is positive at zero */
-        if (l1_weights || homo_l1_weight){ 
-            for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
-                index_t v = comp_list[i];
-                if (rX[rv] == Yl1_(v)){
-                    add_term_capacities(v, L1_WEIGHTS_(v));
-                }
-            }
-        }
-        /* box constraint contribution is infinite at the upper bound */
-        if (upp_bnd){
-            for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
-                index_t v = comp_list[i];
-                if (rX[rv] == upp_bnd[v]){ set_term_capacities(v, INF_REAL); }
-            }
-        }else if (homo_upp_bnd < INF_REAL && rX[rv] == homo_upp_bnd){
-            for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
-                set_term_capacities(comp_list[i], INF_REAL);
-            }
-        }
-        /* set the d1 edge capacities */
-        for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
-            index_t v = comp_list[i];
-            for (index_t e = first_edge[v]; e < first_edge[v + 1]; e++){
-                if (!is_active(e)){
-                    set_edge_capacities(e, EDGE_WEIGHTS_(e), EDGE_WEIGHTS_(e));
-                }
-            }
-        }
-        /* find min cut and activate edges correspondingly */
-        Gpar->maxflow(first_vertex[rv + 1] - first_vertex[rv],
-            comp_list + first_vertex[rv]);
-
-        for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
-            index_t v = comp_list[i];
-            for (index_t e = first_edge[v]; e < first_edge[v + 1]; e++){
-                if (!is_active(e) && is_sink(v) != is_sink(adj_vertices[e])){
-                    set_active(e);
-                    rv_activation++;
-                }
-            }
-        }
-
-        /**  when no nondifferentiable part exists besides the total variation, 
-         **  only one cut is required, for direction 1_U - 1_Uc, and it is 
-         **  equivalent to the above cut  **/
-        if (!l1_weights && !homo_l1_weight && !low_bnd && !upp_bnd &&
-            homo_low_bnd == -INF_REAL && homo_upp_bnd == INF_REAL){
-            set_saturation(rv, rv_activation == 0);
-            activation += rv_activation;
-            continue;
-        }
-
-        /**  second cut: directions -1_U  **/
-        /* set the source/sink capacities */
-        for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
-            index_t v = comp_list[i];
-            set_term_capacities(v, grad[v]);
-        }
-        /* l1 contribution is negative at zero */
-        if (l1_weights || homo_l1_weight){
-            for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
-                index_t v = comp_list[i];
-                if (rX[rv] == Yl1_(v)){
-                    add_term_capacities(v, -L1_WEIGHTS_(v));
-                }
-            }
-        }
-        /* box constraint contribution is infinite at the lower bound */
-        if (low_bnd){
-            for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
-                index_t v = comp_list[i];
-                if (rX[rv] == low_bnd[v]){ set_term_capacities(v, -INF_REAL); }
-            }
-        }else if (homo_low_bnd > -INF_REAL && rX[rv] == homo_low_bnd){
-            for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
-                set_term_capacities(comp_list[i], -INF_REAL);
-            }
-        }
-        /* set the d1 edge capacities */
-        #pragma omp parallel for schedule(static) NUM_THREADS(E)
-        for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
-            index_t v = comp_list[i];
-            for (index_t e = first_edge[v]; e < first_edge[v + 1]; e++){
-                if (!is_active(e)){
-                    set_edge_capacities(e, EDGE_WEIGHTS_(e), EDGE_WEIGHTS_(e));
-                }
-            }
-        }
-        /* find min cut and activate edges correspondingly */
-        Gpar->maxflow(first_vertex[rv + 1] - first_vertex[rv],
-            comp_list + first_vertex[rv]);
-
-        for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
-            index_t v = comp_list[i];
-            for (index_t e = first_edge[v]; e < first_edge[v + 1]; e++){
-                if (!is_active(e) && is_sink(v) != is_sink(adj_vertices[e])){
-                    set_active(e);
-                    rv_activation++;
-                }
-            }
-        }
-
-        set_saturation(rv, rv_activation == 0);
-        activation += rv_activation;
-
-    } // end for rv
-
-    delete Gpar;
-
-    } // end parallel region
+    index_t activation = Cp<real_t, index_t, comp_t>::split();
 
     free(grad);
     return activation;
+}
+
+TPL uintmax_t CP_D1_QL1B::split_complexity()
+{
+    uintmax_t complexity = maxflow_complexity(); // graph cut
+    complexity += V; // account for gradient, l1, bounds and final labeling
+    complexity += E; // edges capacities
+    if (l1_weights || homo_l1_weight || low_bnd || upp_bnd ||
+        homo_low_bnd != -INF_REAL || homo_upp_bnd != INF_REAL){
+        complexity *= 2; // nondifferentiability: two cuts
+    }
+    return complexity;
+}
+
+TPL void CP_D1_QL1B::split_component(Cp_graph<real_t, index_t, comp_t>* G,
+    comp_t rv)
+{
+    /**  first cut +1 versus 0; second cut -1 versus 0  **/
+    for (comp_t dir = 1; dir <= 2; dir++){
+
+    /* set gradient terminal capacities */
+    if (dir == 1){
+        for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
+            index_t v = comp_list[i];
+            set_term_capacities(v, grad[v]);
+        }
+    }else{
+        for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
+            index_t v = comp_list[i];
+            set_term_capacities(v, -grad[v]);
+        }
+    }
+
+    /* l1 contribution */
+    if (l1_weights || homo_l1_weight){ 
+        for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
+            index_t v = comp_list[i];
+            if (rX[rv] == Yl1_(v)){
+                add_term_capacities(v, L1_WEIGHTS_(v));
+            }
+        }
+    }
+
+    /* box constraint contribution is infinite at the boundary */
+    if (dir == 1 && upp_bnd){
+        for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
+            index_t v = comp_list[i];
+            if (rX[rv] == upp_bnd[v]){ set_term_capacities(v, INF_REAL); }
+        }
+    }else if (dir == 1 && homo_upp_bnd < INF_REAL && rX[rv] == homo_upp_bnd){
+        continue; // no value can increase
+    }else if (dir == 2 && low_bnd){
+        for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
+            index_t v = comp_list[i];
+            if (rX[rv] == low_bnd[v]){ set_term_capacities(v, INF_REAL); }
+        }
+    }else if (dir == 2 && homo_low_bnd > -INF_REAL && rX[rv] == homo_low_bnd){
+        continue; // no value can decrease
+    }
+
+    /* set the d1 edge capacities */
+    for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
+        index_t v = comp_list[i];
+        for (index_t e = first_edge[v]; e < first_edge[v + 1]; e++){
+            if (!is_active(e)){
+                set_edge_capacities(e, EDGE_WEIGHTS_(e), EDGE_WEIGHTS_(e));
+            }
+        }
+    }
+
+    /* find min cut and assign label accordingly */
+    G->maxflow(first_vertex[rv + 1] - first_vertex[rv], comp_list +
+        first_vertex[rv]);
+
+    if (dir == 1){
+        for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
+            index_t v = comp_list[i];
+            label_assign[v] = is_sink(v) ? dir : 0;
+        }
+        /* when no nondifferentiable part exists besides the total variation, 
+         * only one cut is required (+1 vs -1), equivalent to the first one */
+        if (!l1_weights && !homo_l1_weight && !low_bnd && !upp_bnd &&
+            homo_low_bnd == -INF_REAL && homo_upp_bnd == INF_REAL){
+            return;
+        }
+    }else{
+        for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
+            index_t v = comp_list[i];
+            if (is_sink(v)){ label_assign[v] = dir; }
+        }
+    }
+    
+    } // end for cut
 }
 
 TPL real_t CP_D1_QL1B::compute_evolution(bool compute_dif)

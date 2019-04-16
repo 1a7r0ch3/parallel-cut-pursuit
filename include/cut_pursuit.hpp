@@ -26,7 +26,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *===========================================================================*/
 #pragma once
-#include <cstdlib>
+#include <cstdint> // for uintmax_t, requires C++11
+#include <cstdlib> // for size_t and malloc
 #include <chrono>
 #include <limits>
 #include <iostream>
@@ -34,6 +35,7 @@
 
 /* flag an activated edge on residual capacity of its corresponding arcs */
 #define ACTIVE_EDGE ((real_t) -1.0) 
+#define CUT_SEP_EDGE ((real_t) -2.0) // for parallelization
 /* maximum number of components; no component can have this identifier */
 #define MAX_NUM_COMP (std::numeric_limits<comp_t>::max())
 /* special values for merge step */
@@ -70,7 +72,7 @@ public:
 
     /**  manipulate private members pointers and values  **/
 
-    void reset_active_edges(); // flag all edges as not active
+    void reset_edges(); // flag all edges as not active
 
     /* if 'edge_weights' is null, homogeneously equal to 'homo_edge_weight' */
     void set_edge_weights(const real_t* edge_weights = nullptr,
@@ -138,21 +140,19 @@ protected:
     value_t *rX, *last_rX; // reduced iterate (values of the components)
     comp_t saturation_count; // number of saturated components
 
-
-
     /**  reduced graph  **/
 
     comp_t rV, last_rV; // number of components (reduced vertices)
     size_t rE; // number of reduced edges
-    comp_t *comp_assign; // assignment of each vertex to a component
+    comp_t* comp_assign; // assignment of each vertex to a component
     /* list the vertices of each components:
      * - vertices are gathered in 'comp_list' so that all vertices belonging
      * to a same components are consecutive
      * - for each component, 'first_vertex' indicates the index of its first
      * vertex in 'comp_list' */
     index_t *comp_list, *first_vertex;
-    comp_t *reduced_edges; // array with pair of vertices
-    real_t *reduced_edge_weights;
+    comp_t* reduced_edges; // array with pair of vertices
+    real_t* reduced_edge_weights;
 
     /** parameters **/
 
@@ -169,7 +169,11 @@ protected:
 
     bool is_active(index_t e); // check if edge e is active
 
+    bool is_cut_sep(index_t e); // check if edge e is a parallel cut separation
+
     void set_active(index_t e); // flag an active edge
+
+    void set_cut_sep(index_t e); // flag a parallel cut separation
 
     void set_inactive(index_t e); // flag an inactive edge
 
@@ -197,16 +201,26 @@ protected:
 
     void add_term_capacities(index_t v, real_t cap);
 
-    /**  methods for cut-pursuit steps  **/
+    /**  split components with graph cuts and activate edges, in parallel  **/
+
+    /* rough estimate of the number of operations for split step;
+     * useful for estimating the number of parallel threads */
+    uintmax_t maxflow_complexity(); // just for a graph cut
+    virtual uintmax_t split_complexity() = 0;
 
     /* get a parallel copy of the flow graph */
     Cp_graph<real_t, index_t, comp_t>* get_parallel_flow_graph();
 
-    /* compute reduced values */
-    virtual void solve_reduced_problem() = 0;
+    /* prefered alternative value for each vertex */
+    comp_t*& label_assign = comp_assign; // reuse the same storage
 
-    /* split components with graph cuts, by activating edges */
-    virtual index_t split() = 0;
+    virtual void split_component(Cp_graph<real_t, index_t, comp_t>* G,
+        comp_t rv) = 0;
+    virtual index_t split();
+
+    /**  compute reduced values  **/
+
+    virtual void solve_reduced_problem() = 0;
 
     /**  merging components when deemed useful  **/
 
@@ -323,6 +337,9 @@ private:
 TPL inline bool CP::is_active(index_t e)
 { return G->arcs[(size_t) 2*e].r_cap == ACTIVE_EDGE; }
 
+TPL inline bool CP::is_cut_sep(index_t e)
+{ return G->arcs[(size_t) 2*e].r_cap == CUT_SEP_EDGE; }
+
 TPL inline bool CP::is_sink(index_t v)
 { return !G->nodes[v].parent || G->nodes[v].is_sink; }
 
@@ -348,6 +365,9 @@ TPL inline void CP::set_edge_capacities(index_t e, real_t cap_uv,
 
 TPL inline void CP::set_active(index_t e)
 { set_edge_capacities(e, ACTIVE_EDGE, ACTIVE_EDGE); }
+
+TPL inline void CP::set_cut_sep(index_t e)
+{ set_edge_capacities(e, CUT_SEP_EDGE, CUT_SEP_EDGE); }
 
 TPL inline void CP::set_inactive(index_t e)
 { set_edge_capacities(e, 0.0, 0.0); }

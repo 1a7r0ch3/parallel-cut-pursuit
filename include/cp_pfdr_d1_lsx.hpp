@@ -116,12 +116,15 @@ private:
     real_t pfdr_rho, pfdr_cond_min, pfdr_dif_rcd, pfdr_dif_tol;
     int pfdr_it, pfdr_it_max;
 
-    /**  methods  **/
+    /**  cut-pursuit steps  **/
 
     /* compute reduced values */
     void solve_reduced_problem() override;
 
-    index_t split() override;
+    /* split */
+    real_t* grad; // store gradient of smooth part
+    index_t split() override; // overload for computing gradient
+    void split_component(comp_t rv) override;
 
     /* relative iterate evolution in l1 norm and components saturation */
     real_t compute_evolution(bool compute_dif) override;

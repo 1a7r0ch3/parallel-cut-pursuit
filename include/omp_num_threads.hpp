@@ -11,7 +11,9 @@
     #include <cstdint>  // requires C++11, needed for uintmax_t
 
     /* rough minimum number of operations per thread */
-    #define MIN_OPS_PER_THREAD 1000
+    #ifndef MIN_OPS_PER_THREAD
+        #define MIN_OPS_PER_THREAD 1000
+    #endif
 
     /* num_ops is a rough estimation of the total number of operations 
      * max_threads is the maximum number of jobs performed in parallel */
