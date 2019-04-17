@@ -3,7 +3,7 @@ import os
 import sys
 from cp_pfdr_d1_ql1b_ext import cp_pfdr_d1_ql1b_ext
 
-def cp_pfdr_d1_ql1b(Y, A, first_edge, adj_vertices, edge_weights=None, 
+def cp_pfdr_d1_ql1b(Y, A, first_edge, adj_vertices, edge_weights=1.0, 
                     Yl1=None, l1_weights=None, low_bnd=None, upp_bnd=None, 
                     cp_dif_tol=1e-5, cp_it_max=10, pfdr_rho=1., 
                     pfdr_cond_min=1e-2, pfdr_dif_rcd=0., pfdr_dif_tol=None, 
@@ -12,7 +12,7 @@ def cp_pfdr_d1_ql1b(Y, A, first_edge, adj_vertices, edge_weights=None,
                     compute_Time=False, compute_Dif=False):
     """
     Comp, rX, cp_it, Obj, Time, Dif = cp_pfdr_d1_ql1b(
-            Y | AtY, A | AtA, first_edge, adj_vertices, edge_weights=None,
+            Y | AtY, A | AtA, first_edge, adj_vertices, edge_weights=1.0,
             Yl1=None, l1_weights=None, low_bnd=None, upp_bnd=None,
             cp_dif_tol=1e-5, cp_it_max=10, pfdr_rho=1.0, pfdr_cond_min=1e-2,
             pfdr_dif_rcd=0.0, pfdr_dif_tol=1e-3*cp_dif_tol,
@@ -52,14 +52,18 @@ def cp_pfdr_d1_ql1b(Y, A, first_edge, adj_vertices, edge_weights=None,
     this can be easily changed in the wrapper source if more than 65535
     components are expected (recompilation is necessary)
 
-    Y - observations, (real) array of length N (direct matricial case) or of 
-        length V (premultiplied to the left by A^t), or empty matrix (for all 
-        zeros)
-    A - matrix, (real) N-by-V array (direct matricial case), or V-by-V array
-        (premultiplied to the left by A^t), or V-by-1 array (square diagonal
-        of A^t A = A^2), or nonzero scalar (for identity matrix), or zero 
-        scalar (for no quadratic part); if N = V in a direct matricial case, 
-        the last argument AtA_if_square must be set to false
+    Y - observations, (real) array of length N (direct matricial case) or
+                             array of length V (left-premult. by A^t), or
+                             empty matrix (for all zeros)
+    A - matrix, (real) N-by-V array (direct matricial case), or
+                       V-by-V array (premultiplied to the left by A^t), or
+                       V-by-1 array (_square_ diagonal of A^t A = A^2), or
+                       nonzero scalar (for identity matrix), or
+                       zero scalar (for no quadratic part);
+        for an arbitrary scalar matrix, use identity and scale observations
+        and penalizations accordingly
+        if N = V in a direct matricial case, the last argument 'AtA_if_square'
+        must be set to false
     first_edge, adj_vertices - graph forward-star representation:
         edges are numeroted (C-style indexing) so that all vertices originating
         from a same vertex are consecutive;
@@ -69,7 +73,7 @@ def cp_pfdr_d1_ql1b(Y, A, first_edge, adj_vertices, edge_weights=None,
             number of edges;
         for each edge, 'adj_vertices' indicates its ending vertex, array of 
             length E (uint32)
-    edge_weights - array of length E or scalar for homogeneous weights (real)
+    edge_weights - array of length E or a scalar for homogeneous weights (real)
     Yl1        - offset for l1 penalty, (real) array of length V,
                  or empty matrix (for all zeros)
     l1_weights - array of length V or scalar for homogeneous weights (real)

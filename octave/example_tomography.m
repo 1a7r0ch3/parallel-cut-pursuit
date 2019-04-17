@@ -38,7 +38,7 @@ Yl1 = []; low_bnd = 0.0; upp_bnd = 1.0;
     cp_dif_tol, cp_it_max, pfdr_rho, pfdr_cond_min, pfdr_dif_rcd, ...
     pfdr_dif_tol, pfdr_it_max, pfdr_verbose);
 time = toc;
-x = rX(Comp+1); % rX is components values, Comp is components assignment
+x = rX(Comp + 1); % rX is components values, Comp is components assignment
 clear Comp rX;
 
 fprintf('Total MEX execution time %.1f s\n\n', time);

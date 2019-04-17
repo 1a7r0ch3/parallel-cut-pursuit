@@ -53,7 +53,7 @@ vert_weights = []; coor_weights = [];
     homo_d0_weight, vert_weights, coor_weights, cp_dif_tol, cp_it_max, ...
     K, split_iter_num, kmpp_init_num, kmpp_iter_num, verbose);
 time = toc;
-x = rX(:, Comp+1); % rX is components values, Comp is components assignments
+x = rX(:, Comp + 1); % rX is components values, Comp is components assignments
 clear Comp rX;
 fprintf('Total MEX execution time %.0f s\n\n', time);
 

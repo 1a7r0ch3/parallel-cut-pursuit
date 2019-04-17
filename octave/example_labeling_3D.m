@@ -49,7 +49,7 @@ loss_weights = []; d1_coor_weights = [];
     cp_dif_tol, cp_it_max, pfdr_rho, pfdr_cond_min, pfdr_dif_rcd, ...
     pfdr_dif_tol, pfdr_it_max, pfdr_verbose);
 time = toc;
-x = rX(:, Comp+1); % rX is components values, Comp is components assignments
+x = rX(:, Comp + 1); % rX is components values, Comp is components assignments
 clear Comp rX;
 fprintf('Total MEX execution time %.0f s\n\n', time);
 

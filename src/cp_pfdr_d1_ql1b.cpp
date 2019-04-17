@@ -175,7 +175,7 @@ TPL void CP_D1_QL1B::solve_reduced_problem()
             /* fill upper triangular part of rA^t rA */
             #pragma omp parallel for schedule(dynamic) NUM_THREADS(V*V/2, rV)
             for (comp_t ru = 0; ru < rV; ru++){
-                real_t *rAAu = rAA + (size_t) rV*ru;
+                real_t* rAAu = rAA + (size_t) rV*ru;
                 for (comp_t rv = 0; rv <= ru; rv++){
                     rAAu[rv] = ZERO;
                     /* run along the component ru */

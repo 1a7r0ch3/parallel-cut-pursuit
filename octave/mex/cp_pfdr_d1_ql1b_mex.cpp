@@ -21,13 +21,13 @@ using namespace std;
 typedef uint32_t index_t;
 # define VERTEX_CLASS mxUINT32_CLASS
 # define VERTEX_ID "uint32"
-typedef uint16_t comp_t;
-# define COMP_CLASS mxUINT16_CLASS
-# define COMP_ID "uint16"
+// typedef uint16_t comp_t;
+// # define COMP_CLASS mxUINT16_CLASS
+// # define COMP_ID "uint16"
 /* uncomment the following if more than 65535 components are expected */
-// typedef uint32_t comp_t;
-// # define COMP_CLASS mxUINT32_CLASS
-// # define COMP_ID "uint32"
+typedef uint32_t comp_t;
+# define COMP_CLASS mxUINT32_CLASS
+# define COMP_ID "uint32"
 
 /* arrays with arguments type */
 static const int args_real_t[] = {0, 1, 4, 5, 6, 7, 8};
@@ -118,7 +118,7 @@ static void cp_pfdr_d1_ql1b_mex(int nlhs, mxArray **plhs, int nrhs, \
     }
 
     /* penalizations */
-    const real_t *edge_weights =
+    const real_t* edge_weights =
         (nrhs > 4 && mxGetNumberOfElements(prhs[4]) > 1) ?
         (real_t*) mxGetData(prhs[4]) : nullptr;
     real_t homo_edge_weight =
@@ -127,7 +127,7 @@ static void cp_pfdr_d1_ql1b_mex(int nlhs, mxArray **plhs, int nrhs, \
 
     const real_t* Yl1 = (nrhs > 5 && !mxIsEmpty(prhs[5])) ?
         (real_t*) mxGetData(prhs[5]) : nullptr;
-    const real_t *l1_weights =
+    const real_t* l1_weights =
         (nrhs > 6 && mxGetNumberOfElements(prhs[6]) > 1) ?
         (real_t*) mxGetData(prhs[6]) : nullptr;
     real_t homo_l1_weight =
@@ -193,9 +193,9 @@ static void cp_pfdr_d1_ql1b_mex(int nlhs, mxArray **plhs, int nrhs, \
 
     /* copy reduced values */
     comp_t rV = cp->get_components();
-    real_t *cp_rX = cp->get_reduced_values();
+    real_t* cp_rX = cp->get_reduced_values();
     plhs[1] = mxCreateNumericMatrix(rV, 1, mxREAL_CLASS, mxREAL);
-    real_t *rX = (real_t*) mxGetData(plhs[1]);
+    real_t* rX = (real_t*) mxGetData(plhs[1]);
     for (comp_t rv = 0; rv < rV; rv++){ rX[rv] = cp_rX[rv]; }
     
     cp->set_components(0, nullptr); // prevent Comp to be free()'d

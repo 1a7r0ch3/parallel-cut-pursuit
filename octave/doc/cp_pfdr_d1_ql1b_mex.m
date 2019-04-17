@@ -44,14 +44,18 @@ function [Comp, rX, cp_it, Obj, Time, Dif] = cp_pfdr_d1_ql1b_mex(Y, A, ...
 % can be easily changed in the mex source if more than 65535 components are
 % expected (recompilation is necessary)
 %
-% Y - observations, (real) array of length N (direct matricial case)
-%     or of length V (premultiplied to the left by A^t), or empty matrix (for
-%     all zeros)
-% A - matrix, (real) N-by-V array (direct matricial case), or V-by-V array
-%     (premultiplied to the left by A^t), or V-by-1 array (square diagonal
-%     of A^t A = A^2), or nonzero scalar (for identity matrix), or zero scalar
-%     (for no quadratic part); if N = V in a direct matricial case, the last
-%     argument AtA_if_square must be set to false
+% Y - observations, (real) array of length N (direct matricial case), or
+%                          array of length V (left-premult. by A^t), or
+%                          empty matrix (for all zeros)
+% A - matrix, (real) N-by-V array (direct matricial case), or
+%                    V-by-V array (premultiplied to the left by A^t), or
+%                    V-by-1 array (_square_ diagonal of A^t A = A^2), or
+%                    nonzero scalar (for identity matrix), or
+%                    zero scalar (for no quadratic part);
+%     for an arbitrary scalar matrix, use identity and scale observations and
+%     penalizations accordingly
+%     if N = V in a direct matricial case, the last argument 'AtA_if_square'
+%     must be set to false
 % first_edge, adj_vertices - graph forward-star representation:
 %     edges are numeroted (C-style indexing) so that all vertices originating
 %         from a same vertex are consecutive;
@@ -104,7 +108,7 @@ function [Comp, rX, cp_it, Obj, Time, Dif] = cp_pfdr_d1_ql1b_mex(Y, A, ...
 %        the actual minimizer is then reconstructed as X = rX(Comp + 1);
 % cp_it - actual number of cut-pursuit iterations performed
 % Obj  - the values of the objective functional along iterations (array of
-%        length cp_it + 1) in the precomputed A^t A version, a constant
+%        length cp_it + 1); in the precomputed A^t A version, a constant
 %        1/2||Y||^2 in the quadratic part is omited
 % Time - if requested, the elapsed time along iterations
 %        (array of length cp_it + 1)

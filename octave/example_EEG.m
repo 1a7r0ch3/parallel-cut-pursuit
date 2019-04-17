@@ -40,7 +40,8 @@ supp0 = x0 ~= 0; % ground truth support
 % the following creates a colormap adapted to representation of sparse data
 n = numberOfColors/3;
 % luminance of pure red is 0.2989
-redMap = [linspace(darkLevel/0.2989, 1, floor(n))'; ones(round(n) + ceil(n), 1)];
+redMap = [linspace(darkLevel/0.2989, 1, floor(n))'; ...
+          ones(round(n) + ceil(n), 1)];
 greenMap = [zeros(floor(n), 1);  (1:round(n))'/round(n); ones(ceil(n), 1)];
 blueMap = [zeros(floor(n) + round(n), 1); (1:ceil(n))'/ceil(n)];
 colMap = [redMap, greenMap, blueMap];
@@ -78,7 +79,7 @@ Yl1 = []; low_bnd = 0.0; upp_bnd = Inf;
     cp_dif_tol, cp_it_max, pfdr_rho, pfdr_cond_min, pfdr_dif_rcd, ...
     pfdr_dif_tol, pfdr_it_max, pfdr_verbose);
 time = toc;
-x = rX(Comp+1); % rX is components values, Comp is components assignment
+x = rX(Comp + 1); % rX is components values, Comp is components assignment
 clear Comp rX;
 fprintf('Total MEX execution time %.1f s\n\n', time);
 
