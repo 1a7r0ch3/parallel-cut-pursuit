@@ -67,6 +67,9 @@ protected:
     using Cp<real_t, index_t, comp_t>::rV;
     using Cp<real_t, index_t, comp_t>::rE;
     using Cp<real_t, index_t, comp_t>::first_vertex;
+    using Cp<real_t, index_t, comp_t>::comp_list;
+    using Cp<real_t, index_t, comp_t>::label_assign;
+    using Cp<real_t, index_t, comp_t>::is_par_sep;
     using Cp<real_t, index_t, comp_t>::reduced_edge_weights;
     using Cp<real_t, index_t, comp_t>::reduced_edges;
     using Cp<real_t, index_t, comp_t>::malloc_check;
@@ -75,6 +78,10 @@ protected:
 private:
     const D1p d1p; // see public enum declaration
 
+    /* remove or activate separating edges used for balancing parallel
+     * workload; see header `cut_pursuit.hpp` */
+    index_t remove_parallel_separations(comp_t rV_new) override;
+
     /* test if two components are sufficiently close to merge */
     bool is_almost_equal(comp_t ru, comp_t rv);
 
@@ -82,6 +89,8 @@ private:
     comp_t compute_merge_chains() override;
 
     /**  type resolution for base template class members  **/
+    using Cp<real_t, index_t, comp_t>::set_active;
+    using Cp<real_t, index_t, comp_t>::set_inactive;
     using Cp<real_t, index_t, comp_t>::merge_components;
     using Cp<real_t, index_t, comp_t>::get_merge_chain_root;
 };

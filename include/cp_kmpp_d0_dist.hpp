@@ -123,10 +123,11 @@ private:
 
     real_t component_average(comp_t rv, real_t* avgXv);
 
-    void init_split_values(comp_t rv, real_t* altX, comp_t* label_assign)
-        override; // k-means ++
-    void update_split_values(comp_t rv, real_t* altX, comp_t* label_assign)
-        override; // weighted average
+    /* rough estimate of the number of operations for initializing and
+     * updating the split values */
+    uintmax_t split_values_complexity() override;
+    void init_split_values(comp_t rv, real_t* altX) override; // k-means ++
+    void update_split_values(comp_t rv, real_t* altX) override; // average
     bool is_split_value(real_t altX) override; // flag with infinity
 
     /**  merging components **/
@@ -154,15 +155,16 @@ private:
 
     /**  type resolution for base template class members  **/
     using Cp_d0<real_t, index_t, comp_t>::K;
+    using Cp_d0<real_t, index_t, comp_t>::split_iter_num;
     using typename Cp_d0<real_t, index_t, comp_t>::Merge_info;
     using Cp_d0<real_t, index_t, comp_t>::merge_info_list;
     using Cp_d0<real_t, index_t, comp_t>::no_merge_info;
     using Cp<real_t, index_t, comp_t>::D;
     using Cp<real_t, index_t, comp_t>::rX;
     using Cp<real_t, index_t, comp_t>::last_rX;
-    using Cp<real_t, index_t, comp_t>::saturation_count;
-    using Cp<real_t, index_t, comp_t>::get_tmp_comp_assign;
-    using Cp<real_t, index_t, comp_t>::set_tmp_comp_assign;
+    using Cp<real_t, index_t, comp_t>::saturated_comp;
+    using Cp<real_t, index_t, comp_t>::saturated_vert;
+    using Cp<real_t, index_t, comp_t>::tmp_comp_assign;
     using Cp<real_t, index_t, comp_t>::eps;
     using Cp<real_t, index_t, comp_t>::V;
     using Cp<real_t, index_t, comp_t>::E;
@@ -173,10 +175,11 @@ private:
     using Cp<real_t, index_t, comp_t>::rV;
     using Cp<real_t, index_t, comp_t>::rE;
     using Cp<real_t, index_t, comp_t>::comp_assign;
+    using Cp<real_t, index_t, comp_t>::label_assign;
     using Cp<real_t, index_t, comp_t>::comp_list;
     using Cp<real_t, index_t, comp_t>::first_vertex;
     using Cp<real_t, index_t, comp_t>::reduced_edge_weights;
-    using Cp<real_t, index_t, comp_t>::is_saturated;
+    using Cp<real_t, index_t, comp_t>::saturation;
     using Cp<real_t, index_t, comp_t>::verbose;
     using Cp<real_t, index_t, comp_t>::malloc_check;
 };

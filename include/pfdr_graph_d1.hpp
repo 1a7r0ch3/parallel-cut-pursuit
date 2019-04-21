@@ -98,7 +98,7 @@ protected:
     /**  graph  **/
 
     /* number of vertices and of (undirected) edges */
-    const vertex_t &V = Pfdr<real_t, vertex_t>::size;
+    const vertex_t& V = Pfdr<real_t, vertex_t>::size;
     const size_t E;
 
     /**  specialization of base virtual methods  **/

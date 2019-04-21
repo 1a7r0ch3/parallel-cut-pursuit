@@ -2,7 +2,8 @@
  * [Comp, rX, it, Obj, Time, Dif] = cp_kmpp_d0_dist_mex(loss, Y, first_edge,
  *      adj_vertices, edge_weights = 1.0, vert_weights = [], coor_weights = [],
  *      cp_dif_tol = 1e-3, cp_it_max = 10, K = 2, split_iter_num = 2,
- *      kmpp_init_num = 3, kmpp_iter_num = 3, verbose = 1)
+ *      kmpp_init_num = 3, kmpp_iter_num = 3, verbose = 1,
+ *      max_num_threads = 0, balance_parallel_split = true)
  * 
  *  Hugo 2019
  *===========================================================================*/
@@ -111,6 +112,10 @@ static void cp_kmpp_d0_dist_mex(int nlhs, mxArray **plhs, int nrhs, \
     int kmpp_init_num = (nrhs > 11) ? mxGetScalar(prhs[11]) : 3;
     int kmpp_iter_num = (nrhs > 12) ? mxGetScalar(prhs[12]) : 3;
     int verbose = (nrhs > 13) ? mxGetScalar(prhs[13]) : 1;
+    int max_num_threads = (nrhs > 14 && mxGetScalar(prhs[14]) > 0) ?
+        mxGetScalar(prhs[14]) : omp_get_max_threads();
+    bool balance_parallel_split = (nrhs > 15) ?
+        mxIsLogicalScalarTrue(prhs[15]) : true;
 
     /**  prepare output; rX (plhs[1]) is created later  **/
 
@@ -134,11 +139,13 @@ static void cp_kmpp_d0_dist_mex(int nlhs, mxArray **plhs, int nrhs, \
 
     cp->set_loss(loss, Y, vert_weights, coor_weights);
     cp->set_edge_weights(edge_weights, homo_edge_weight);
-    cp->set_monitoring_arrays(Obj, Time, Dif);
-    cp->set_components(0, Comp);
     cp->set_cp_param(cp_dif_tol, cp_it_max, verbose);
     cp->set_split_param(K, split_iter_num);
     cp->set_kmpp_param(kmpp_init_num, kmpp_iter_num);
+    cp->set_parallel_param(max_num_threads, balance_parallel_split);
+    cp->set_monitoring_arrays(Obj, Time, Dif);
+
+    cp->set_components(0, Comp); // use the preallocated component array Comp
 
     *it = cp->cut_pursuit();
 

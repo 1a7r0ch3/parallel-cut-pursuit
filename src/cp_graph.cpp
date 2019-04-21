@@ -143,11 +143,9 @@ TPL inline void CP_GRAPH::set_orphan_rear(node *i)
 
 /***********************************************************************/
 
-TPL void CP_GRAPH::maxflow_init(index_t comp_size, const index_t *comp_nodes)
+TPL void CP_GRAPH::maxflow_init(index_t comp_size, const index_t* comp_nodes)
 {
-	node *i;
-    index_t ii;
-    const index_t iimax = comp_size ? comp_size : node_num;
+	node* i;
 
 	queue_first[0] = queue_last[0] = nullptr;
 	queue_first[1] = queue_last[1] = nullptr;
@@ -155,10 +153,10 @@ TPL void CP_GRAPH::maxflow_init(index_t comp_size, const index_t *comp_nodes)
 
 	TIME = 0;
 
-	/* for (i=nodes; i<node_last; i++) */
-	for (ii=0; ii<iimax; ii++)
+    const index_t iimax = comp_size ? comp_size : node_num;
+	for (index_t ii = 0; ii < iimax; ii++)
 	{
-        i = (comp_nodes) ? (nodes + comp_nodes[ii]) : (nodes + ii);
+        i = comp_nodes ? nodes + comp_nodes[ii] : nodes + ii;
 		i -> next = nullptr;
 		i -> TS = TIME;
 		if (i->tr_cap > ZERO)
@@ -262,15 +260,16 @@ TPL void CP_GRAPH::process_source_orphan(node *i)
 	index_t d, d_min = INFINITE_D;
 
 	/* trying to find a new parent */
-	for (a0=i->first; a0; a0=a0->next)
+	for (a0 = i->first; a0; a0 = a0->next)
 	if (a0->sister->r_cap > ZERO)
 	{
 		j = a0 -> head;
-		if (!j->is_sink && (a=j->parent))
+
+		if (!j->is_sink && (a = j->parent))
 		{
 			/* checking the origin of j */
 			d = 0;
-			while ( 1 )
+			while (true)
 			{
 				if (j->TS == TIME)
 				{
@@ -279,18 +278,19 @@ TPL void CP_GRAPH::process_source_orphan(node *i)
 				}
 				a = j -> parent;
 				d ++;
-				if (a==TERMINAL)
+				if (a == TERMINAL)
 				{
 					j -> TS = TIME;
 					j -> DIST = 1;
 					break;
 				}
-				if (a==ORPHAN) { d = INFINITE_D; break; }
+				if (a==ORPHAN){ d = INFINITE_D; break; }
 				j = a -> head;
 			}
-			if (d<INFINITE_D) /* j originates from the source - done */
+
+			if (d < INFINITE_D) /* j originates from the source - done */
 			{
-				if (d<d_min)
+				if (d < d_min)
 				{
 					a0_min = a0;
 					d_min = d;
@@ -325,7 +325,7 @@ TPL void CP_GRAPH::process_source_orphan(node *i)
 				if (a0->sister->r_cap > ZERO) set_active(j);
 				if (a!=TERMINAL && a!=ORPHAN && a->head==i)
 				{
-					set_orphan_rear(j); // add j to the end of the adoption list
+                    set_orphan_rear(j); // add j to the end of adoption list
 				}
 			}
 		}
@@ -411,7 +411,7 @@ TPL void CP_GRAPH::process_sink_orphan(node *i)
 
 /***********************************************************************/
 
-TPL void CP_GRAPH::maxflow(index_t comp_size, const index_t *comp_nodes)
+TPL void CP_GRAPH::maxflow(index_t comp_size, const index_t* comp_nodes)
 {
 	node *i, *j, *current_node = nullptr;
 	arc *a;
@@ -421,12 +421,13 @@ TPL void CP_GRAPH::maxflow(index_t comp_size, const index_t *comp_nodes)
 	{
 		nodeptr_block = new DBlock<nodeptr>(NODEPTR_BLOCK_SIZE);
 	}
-    
+
     maxflow_init(comp_size, comp_nodes);
 
-	// main loop
-	while ( 1 )
+	/* main loop */
+	while (true)
 	{
+
 		if ((i=current_node))
 		{
 			i -> next = nullptr; /* remove active flag */
@@ -483,7 +484,8 @@ TPL void CP_GRAPH::maxflow(index_t comp_size, const index_t *comp_nodes)
 				else if (j->TS <= i->TS &&
 				         j->DIST > i->DIST)
 				{
-					/* heuristic - trying to make the distance from j to the sink shorter */
+					/* heuristic - trying to make the distance from j to the
+                     * sink shorter */
 					j -> parent = a -> sister;
 					j -> TS = i -> TS;
 					j -> DIST = i -> DIST + 1;
@@ -491,10 +493,11 @@ TPL void CP_GRAPH::maxflow(index_t comp_size, const index_t *comp_nodes)
 			}
 		}
 
+		if (++TIME <= 0){
         /* changed type from long to index_t */
         /* can't we prove this won't overflow? */
-		if (++TIME <= 0){
-            std::cerr << "Boykov & Kolmogorov maxflow: timestamp overflow." << std::endl;
+            std::cerr << "Boykov & Kolmogorov maxflow: timestamp overflow."
+                << std::endl;
             exit(EXIT_FAILURE);
         }
 
@@ -516,9 +519,10 @@ TPL void CP_GRAPH::maxflow(index_t comp_size, const index_t *comp_nodes)
 					orphan_first = np -> next;
 					i = np -> ptr;
 					nodeptr_block -> Delete(np);
-					if (!orphan_first) orphan_last = nullptr;
-					if (i->is_sink) process_sink_orphan(i);
-					else            process_source_orphan(i);
+					if (!orphan_first){ orphan_last = nullptr; }
+
+					if (i->is_sink){ process_sink_orphan(i); }
+                    else{ process_source_orphan(i); }
 				}
 
 				orphan_first = np_next;

@@ -23,6 +23,8 @@ pfdr_dif_rcd = 0;
 pfdr_dif_tol = 1e-3*cp_dif_tol;
 pfdr_it_max = 1e4;
 pfdr_verbose = 1e2;
+max_num_threads = 0;
+balance_parallel_split = true;
 
 %%%  initialize data  %%%
 % For details on the data and parameters, see H. Raguet, A Note on the
@@ -47,7 +49,8 @@ loss_weights = []; d1_coor_weights = [];
 [Comp, rX] = cp_pfdr_d1_lsx_mex(loss, y, first_edge, ...
     adj_vertices, homo_d1_weight, loss_weights, d1_coor_weights, ...
     cp_dif_tol, cp_it_max, pfdr_rho, pfdr_cond_min, pfdr_dif_rcd, ...
-    pfdr_dif_tol, pfdr_it_max, pfdr_verbose);
+    pfdr_dif_tol, pfdr_it_max, pfdr_verbose, max_num_threads,
+    balance_parallel_split);
 time = toc;
 x = rX(:, Comp + 1); % rX is components values, Comp is components assignments
 clear Comp rX;

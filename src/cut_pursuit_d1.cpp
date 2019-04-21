@@ -3,7 +3,6 @@
  *===========================================================================*/
 #include <cmath>
 #include "../include/cut_pursuit_d1.hpp"
-#include "../include/omp_num_threads.hpp"
 
 #define ZERO ((real_t) 0.0)
 #define ONE ((real_t) 1.0)
@@ -25,6 +24,39 @@ TPL void CP_D1::set_edge_weights(const real_t* edge_weights,
     Cp<real_t, index_t, comp_t>::set_edge_weights(edge_weights,
         homo_edge_weight);
     this->coor_weights = coor_weights;
+}
+
+TPL index_t CP_D1::remove_parallel_separations(comp_t rV_new)
+{
+    index_t activation = 0;
+
+    /* parallel separation edges must be activated if and only if the descent
+     * directions at its vertices are different; on convex problems where
+     * descent directions only depend on the components values, since they are
+     * the same on both sides of a parallel separation, it is possible to
+     * implement split_component() so that the same label assignment means the
+     * same descent direction */
+    #pragma omp parallel for schedule(static) reduction(+:activation) \
+        NUM_THREADS(first_vertex[rV_new], rV_new)
+    for (comp_t rv_new = 0; rv_new < rV_new; rv_new++){
+        for (index_t i = first_vertex[rv_new]; i < first_vertex[rv_new + 1];
+            i++){
+            index_t v = comp_list[i];
+            comp_t l = label_assign[v];
+            for (index_t e = first_edge[v]; e < first_edge[v + 1]; e++){
+                if (is_par_sep(e)){
+                    if (l == label_assign[adj_vertices[e]]){
+                        set_inactive(e);
+                    }else{
+                        set_active(e);
+                        activation++;
+                    }
+                }
+            }
+        }
+    }
+
+    return activation;
 }
 
 TPL bool CP_D1::is_almost_equal(comp_t ru, comp_t rv)
