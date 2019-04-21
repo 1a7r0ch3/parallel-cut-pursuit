@@ -122,9 +122,13 @@ private:
     void solve_reduced_problem() override;
 
     /* split */
+    /* rough estimate of the number of operations for split step;
+     * useful for estimating the number of parallel threads */
+    uintmax_t split_complexity() override;
     real_t* grad; // store gradient of smooth part
+    void split_component(Cp_graph<real_t, index_t, comp_t>* G, comp_t rv)
+        override;
     index_t split() override; // overload for computing gradient
-    void split_component(comp_t rv) override;
 
     /* relative iterate evolution in l1 norm and components saturation */
     real_t compute_evolution(bool compute_dif) override;
@@ -138,18 +142,18 @@ private:
     using Cp<real_t, index_t, comp_t>::D;
     using Cp<real_t, index_t, comp_t>::rX;
     using Cp<real_t, index_t, comp_t>::last_rX;
-    using Cp<real_t, index_t, comp_t>::saturation_count;
+    using Cp<real_t, index_t, comp_t>::saturated_comp;
+    using Cp<real_t, index_t, comp_t>::saturated_vert;
     using Cp<real_t, index_t, comp_t>::monitor_evolution;
     using Cp<real_t, index_t, comp_t>::is_active;
-    using Cp<real_t, index_t, comp_t>::set_active;
+    using Cp<real_t, index_t, comp_t>::is_free;
     using Cp<real_t, index_t, comp_t>::is_sink;
-    using Cp<real_t, index_t, comp_t>::is_saturated;
-    using Cp<real_t, index_t, comp_t>::set_saturation;
+    using Cp<real_t, index_t, comp_t>::saturation;
     using Cp<real_t, index_t, comp_t>::set_edge_capacities;
-    using Cp<real_t, index_t, comp_t>::set_term_capacities;
-    using Cp<real_t, index_t, comp_t>::add_term_capacities;
-    using Cp<real_t, index_t, comp_t>::get_tmp_comp_assign;
+    using Cp<real_t, index_t, comp_t>::term_capacities;
+    using Cp<real_t, index_t, comp_t>::tmp_comp_assign;
     using Cp<real_t, index_t, comp_t>::get_parallel_flow_graph;
+    using Cp<real_t, index_t, comp_t>::maxflow_complexity;
     using Cp<real_t, index_t, comp_t>::eps;
     using Cp<real_t, index_t, comp_t>::V;
     using Cp<real_t, index_t, comp_t>::E;
@@ -160,6 +164,7 @@ private:
     using Cp<real_t, index_t, comp_t>::rV;
     using Cp<real_t, index_t, comp_t>::rE;
     using Cp<real_t, index_t, comp_t>::comp_assign;
+    using Cp<real_t, index_t, comp_t>::label_assign;
     using Cp<real_t, index_t, comp_t>::comp_list;
     using Cp<real_t, index_t, comp_t>::first_vertex;
     using Cp<real_t, index_t, comp_t>::reduced_edges;

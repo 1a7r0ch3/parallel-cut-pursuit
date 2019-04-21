@@ -1,8 +1,8 @@
 /*=============================================================================
  * Hugo Raguet 2018
  *===========================================================================*/
+#include <algorithm>
 #include "../include/cut_pursuit.hpp"
-#include "../include/omp_num_threads.hpp"
 
 #define ZERO ((real_t) 0.0)
 #define ONE ((real_t) 1.0)
@@ -45,6 +45,8 @@ TPL CP::Cp(index_t V, index_t E, const index_t* first_edge,
 
     rV = 1; rE = 0;
     last_rV = 0;
+    saturated_comp = 0;
+    saturated_vert = 0;
     edge_weights = nullptr;
     homo_edge_weight = ONE;
     comp_assign = nullptr;
@@ -59,6 +61,9 @@ TPL CP::Cp(index_t V, index_t E, const index_t* first_edge,
     dif_tol = ZERO;
     eps = numeric_limits<real_t>::epsilon();
     monitor_evolution = false;
+
+    max_num_threads = omp_get_max_threads();
+    balance_par_split = true;
 }
 
 TPL CP::~Cp()
@@ -108,6 +113,12 @@ TPL void CP::set_cp_param(real_t dif_tol, int it_max, int verbose, real_t eps)
     this->eps = ZERO < dif_tol && dif_tol < eps ? dif_tol : eps;
 }
 
+TPL void CP::set_parallel_param(int max_num_threads, bool balance_par_split)
+{
+    this->max_num_threads = max_num_threads;
+    this->balance_par_split = balance_par_split;
+}
+
 TPL comp_t CP::get_components(comp_t** comp_assign, index_t** first_vertex,
     index_t** comp_list)
 {
@@ -116,7 +127,6 @@ TPL comp_t CP::get_components(comp_t** comp_assign, index_t** first_vertex,
     if (comp_list){ *comp_list = this->comp_list; }
     return this->rV;
 }
-
 
 TPL size_t CP::get_reduced_graph(comp_t** reduced_edges,
     real_t** reduced_edge_weights)
@@ -163,7 +173,8 @@ TPL int CP::cut_pursuit(bool init)
         }
 
         if (!activation){ /* do not recompute reduced problem */
-            saturation_count = rV;
+            saturated_comp = rV;
+            saturated_vert = V;
             if (dif_tol > ZERO || iterate_evolution){
                 dif = ZERO;
                 if (iterate_evolution){ iterate_evolution[it] = dif; }
@@ -178,7 +189,7 @@ TPL int CP::cut_pursuit(bool init)
         }else{
             /* store previous component assignment */
             for (index_t v = 0; v < V; v++){
-                set_tmp_comp_assign(v, comp_assign[v]);
+                tmp_comp_assign(v) = comp_assign[v];
             }
             last_rV = rV;
             if (monitor_evolution){ /* store also last iterate values */
@@ -194,7 +205,7 @@ TPL int CP::cut_pursuit(bool init)
         if (verbose){ cout << "\tCompute connected components... " << flush; }
         compute_connected_components();
         if (verbose){
-            cout << rV << " connected component(s), " << saturation_count <<
+            cout << rV << " connected component(s), " << saturated_comp <<
                 " saturated." << endl;
         }
 
@@ -241,7 +252,7 @@ TPL void CP::print_progress(int it, real_t dif, double timer)
         cout << scientific << "\trelative iterate evolution " << dif
             << " (tol. " << dif_tol << ")\n";
     }
-    cout << "\t" << rV << " connected component(s), " << saturation_count <<
+    cout << "\t" << rV << " connected component(s), " << saturated_comp <<
         " saturated, and at most " << rE << " reduced edge(s).\n";
     if (timer > 0.0){
         cout.precision(1);
@@ -252,79 +263,34 @@ TPL void CP::print_progress(int it, real_t dif, double timer)
 
 TPL void CP::single_connected_component()
 {
-    for (index_t v = 0; v < V; v++){ comp_assign[v] = 0; }
     free(first_vertex);
     first_vertex = (index_t*) malloc_check(sizeof(index_t)*2);
     first_vertex[0] = 0; first_vertex[1] = V;
-    for (index_t v = 0; v < V; v++){ comp_list[v] = v; }
     rV = 1;
-}
-
-TPL void CP::new_arbitrary_connected_component(comp_t& rv, index_t& comp_size)
-{
-    if (rv == rV){
-        rV = (size_t) 2*rV < MAX_NUM_COMP ? (size_t) 2*rV : MAX_NUM_COMP;
-        first_vertex = (index_t*) realloc_check(first_vertex,
-            sizeof(index_t)*rVp1);
-    }
-    first_vertex[rv + 1] = first_vertex[rv] + comp_size;
-    set_saturation(rv, false);
-    rv++; comp_size = 0;
-    if (rv == MAX_NUM_COMP){
-        cerr << "Cut-pursuit: number of components greater than can be "
-            "represented by comp_t (" << MAX_NUM_COMP << ")." << endl;
-        exit(EXIT_FAILURE);
-    }
-}
-
-TPL void CP::arbitrary_connected_components()
-{
-    index_t max_comp_size = V/rV + 1;
-    free(first_vertex);
-    first_vertex = (index_t*) malloc_check(sizeof(index_t)*rVp1);
-
-    /* cleanup assigned components */
-    for (index_t v = 0; v < V; v++){ comp_assign[v] = NOT_ASSIGNED; }
-
-    index_t comp_size = 0;
-    comp_t rv = 0; // identify and count components
-    first_vertex[0] = 0;
-    index_t i = 0, j = 0; // indices in connected components list
-    for (index_t u = 0; u < V; u++){
-        if (comp_assign[u] != NOT_ASSIGNED){ continue; }
-        /* new component starting at u */
-        comp_assign[u] = rv;
-        comp_size++;
-        comp_list[j++] = u;
-        while (i < j){
-            index_t v = comp_list[i++];
-            /* add neighbors to the connected component list */
-            for (arc* a = G->nodes[v].first; a; a = a->next){
-                index_t w = a->head - G->nodes; // adjacent vertex
-                if (comp_assign[w] != NOT_ASSIGNED){
-                    if (comp_assign[w] != comp_assign[v]){ // might not be rv
-                        a->r_cap = a->sister->r_cap = ACTIVE_EDGE;
-                    }
-                    continue;
+    if (compute_num_threads(split_complexity()) == 1){
+        for (index_t v = 0; v < V; v++){ comp_assign[v] = 0; }
+        for (index_t v = 0; v < V; v++){ comp_list[v] = v; }
+    }else{
+        /* reorganizing the component list by breadth-first search is useful
+         * for the parallelization of the split step */
+        for (index_t v = 0; v < V; v++){ comp_assign[v] = NOT_ASSIGNED; }
+        index_t i, j, u;
+        for (i = j = u = 0; u < V; u++){
+            if (comp_assign[u] != NOT_ASSIGNED){ continue; }
+            comp_assign[u] = 0;
+            /* put in connected components list */
+            comp_list[j++] = u;
+            while (i < j){
+                index_t v = comp_list[i++];
+                /* add neighbors to the connected component list */
+                for (arc* a = G->nodes[v].first; a; a = a->next){
+                    index_t w = a->head - G->nodes; // adjacent vertex
+                    if (comp_assign[w] != NOT_ASSIGNED){ continue; }
+                    comp_assign[w] = 0;
+                    comp_list[j++] = w;
                 }
-                /* put in current connected component */
-                comp_assign[w] = rv;
-                comp_size++;
-                comp_list[j++] = w;
-                if (comp_size == max_comp_size){ // change component
-                    new_arbitrary_connected_component(rv, comp_size);
-                }
-            }
-        } // the current connected component cannot grow anymore
-        if (comp_size > 0){ // add the current component
-            new_arbitrary_connected_component(rv, comp_size);
+            } /* the current connected component is complete */
         }
-    }
-    /* update components lists and assignments */
-    if (rV > rv){
-        rV = rv;
-        first_vertex = (index_t*) realloc_check(first_vertex,
-            sizeof(index_t)*rVp1);
     }
 }
 
@@ -361,24 +327,27 @@ TPL void CP::compute_connected_components()
     /* cleanup assigned components */
     for (index_t v = 0; v < V; v++){ comp_assign[v] = NOT_ASSIGNED; }
 
-    comp_t saturation_par_count = 0; // auxiliary variable for parallel region
+    /* auxiliary variables for parallel region */
+    comp_t saturated_comp_par = 0;
+    index_t saturated_vert_par = 0;
     index_t rVtmp = 0; // identify and count components, prevent overflow
     /* new connected components hierarchically derives from the previous ones,
      * we can thus compute them in parallel along previous components */
     #pragma omp parallel for schedule(dynamic) NUM_THREADS(2*E, rV) \
-        reduction(+:rVtmp, saturation_par_count)
+        reduction(+:rVtmp, saturated_comp_par, saturated_vert_par)
     for (comp_t rv = 0; rv < rV; rv++){
-        if (is_saturated(rv)){ // component stays the same
-            saturation_par_count++;
+        if (saturation(rv)){ // component stays the same
             index_t i = first_vertex[rv];
             index_t v = comp_list[i];
             comp_assign[v] = ASSIGNED_ROOT; // flag the component's root
-            set_tmp_comp_list(i, v);
+            tmp_comp_list(i) = v;
             for (i++; i < first_vertex[rv + 1]; i++){
                 v = comp_list[i];
                 comp_assign[v] = ASSIGNED;
-                set_tmp_comp_list(i, v);
+                tmp_comp_list(i) = v;
             }
+            saturated_comp_par++;
+            saturated_vert_par += first_vertex[rv + 1] - first_vertex[rv];
             rVtmp++;
             continue;
         }
@@ -389,23 +358,26 @@ TPL void CP::compute_connected_components()
             comp_assign[u] = ASSIGNED_ROOT; // flag a component's root
             G->nodes[u].saturation = false; // a new component is not saturated
             /* put in connected components list */
-            set_tmp_comp_list(j++, u);
+            tmp_comp_list(j++) = u;
             while (i < j){
-                index_t v = get_tmp_comp_list(i++);
-                /* add neighbors to the connected component list */
+                index_t v = tmp_comp_list(i++);
+                /* add neighbors to the connected component list;
+                 * breadth-first search is useful for the parallelization of
+                 * the split step */     
                 for (arc* a = G->nodes[v].first; a; a = a->next){
                     if (a->r_cap != ACTIVE_EDGE){
                         index_t w = a->head - G->nodes; // adjacent vertex
                         if (comp_assign[w] != NOT_ASSIGNED){ continue; }
                         comp_assign[w] = ASSIGNED;
-                        set_tmp_comp_list(j++, w);
+                        tmp_comp_list(j++) = w;
                     }
                 }
             } /* the current connected component is complete */
             rVtmp++;
         }
     }
-    saturation_count = saturation_par_count;
+    saturated_comp = saturated_comp_par;
+    saturated_vert = saturated_vert_par;
 
     if (rVtmp > MAX_NUM_COMP){
         cerr << "Cut-pursuit: number of components (" << rVtmp << ") greater "
@@ -414,21 +386,63 @@ TPL void CP::compute_connected_components()
         exit(EXIT_FAILURE);
     }
 
-    /* update components lists and assignments;
-     * the split is hierarchical, that is each component rv is comprised
-     * within a previous iteration component last_rv, and since the new
-     * component list is processed in increasing order of vertex identifiers,
-     * it is guaranteed that rv >= last_rv */
+    /* update components lists and assignments */
     rV = rVtmp;
     free(first_vertex);
     first_vertex = (index_t*) malloc_check(sizeof(index_t)*rVp1);
-    comp_t rv = (comp_t) -1;
-    for (index_t i = 0; i < V; i++){
-        index_t v = comp_list[i] = get_tmp_comp_list(i);
-        if (comp_assign[v] == ASSIGNED_ROOT){ first_vertex[++rv] = i; }
-        comp_assign[v] = rv;
-    }
-    first_vertex[rV] = V;
+    #ifdef _OPENMP /* sort components by decreasing size for parallelization */
+        /* get component sizes and first vertex list */
+        index_t* comp_sizes = (index_t*) malloc_check(sizeof(index_t)*rV);
+        comp_t rv = (comp_t) -1;
+        for (index_t i = 0; i < V; i++){
+            if (comp_assign[tmp_comp_list(i)] == ASSIGNED_ROOT){
+                rv++;
+                comp_sizes[rv] = 1;
+                first_vertex[rv] = i;
+            }else{
+                comp_sizes[rv]++;
+            }
+        }
+        first_vertex[rV] = V;
+        /* get sorting permutation indices */
+        comp_t* sort_indices = (comp_t*) malloc_check(sizeof(comp_t)*rV);
+        for (comp_t rv = 0; rv < rV; rv++){ sort_indices[rv] = rv; }
+        /* sorting can be parallelized as well...
+         * libstdc++ users can simply compile with -D_GLIBCXX_PARALLEL
+         * in which case, omp_set_num_threads() will determine the number of
+         * threads used; scaling linearly with rV seems to work best */ 
+        omp_set_num_threads(compute_num_threads(rV));
+        sort(sort_indices, sort_indices + rV,
+            [comp_sizes] (comp_t ru, comp_t rv) -> bool
+            { return comp_sizes[ru] > comp_sizes[rv]; }); // decreasing order
+        omp_set_num_threads(omp_get_num_procs());
+        /* populate component list in the right order */
+        index_t i = 0;
+        for (comp_t rv = 0; rv < rV; rv++){
+            comp_t rv_s = sort_indices[rv];
+            for (index_t j = first_vertex[rv_s]; j < first_vertex[rv_s + 1];
+                j++){
+                index_t v = comp_list[i] = tmp_comp_list(j);
+                comp_assign[v] = rv;
+                i++;
+            }
+        }
+        /* reorder first vertex list */
+        for (comp_t rv = 0; rv < rV - 1; rv++){
+            first_vertex[rv + 1] = first_vertex[rv] +
+                comp_sizes[sort_indices[rv]];
+        }
+        free(sort_indices);
+        free(comp_sizes);
+    #else
+        comp_t rv = (comp_t) -1;
+        for (index_t i = 0; i < V; i++){
+            index_t v = comp_list[i] = tmp_comp_list(i);
+            if (comp_assign[v] == ASSIGNED_ROOT){ first_vertex[++rv] = i; }
+            comp_assign[v] = rv;
+        }
+        first_vertex[rV] = V;
+    #endif
 }
 
 TPL void CP::compute_reduced_graph()
@@ -532,12 +546,14 @@ TPL void CP::initialize()
         comp_list = (index_t*) malloc_check(sizeof(index_t)*V);
     }
 
+    last_rV = 0;
+    saturated_comp = 0;
+    saturated_vert = 0;
+
     if (rV > 1){ assign_connected_components(); }
     else{ single_connected_component(); }
 
-    last_rV = 0;
-    for (comp_t rv = 0; rv < rV; rv++){ set_saturation(rv, false); }
-    saturation_count = 0;
+    for (comp_t rv = 0; rv < rV; rv++){ saturation(rv) = false; }
 
     compute_reduced_graph();
     rX = (value_t*) malloc_check(sizeof(value_t)*D*rV);
@@ -548,47 +564,221 @@ TPL void CP::initialize()
 TPL uintmax_t CP::maxflow_complexity()
 { return (uintmax_t) 2*E + V; }
 
+TPL int CP::balance_parallel_split(comp_t& rV_new, comp_t& rV_big, 
+        index_t*& first_vertex_big)
+{
+    if (!balance_par_split){
+        rV_new = 0; rV_big = 0;
+        return compute_num_threads(split_complexity(), rV);
+    }
+
+    int num_thrds = compute_num_threads(split_complexity());
+    index_t max_comp_size = (V - 1)/num_thrds + 1;
+
+    /**  get number of components to split and of resulting new components  **/
+    rV_big = 0;
+    rV_new = 0;
+    index_t comp_size = first_vertex[1] - first_vertex[0];
+    while (comp_size > max_comp_size){
+        rV_new += saturation(rV_big) ? 1 : (comp_size - 1)/max_comp_size + 1;
+        rV_big++;
+        if (rV_big == rV){ break; }
+        comp_size = first_vertex[rV_big + 1] - first_vertex[rV_big];
+    }
+
+    if (rV_new == rV_big){ return num_thrds; }
+
+    if ((size_t) rV + rV_new - rV_big > MAX_NUM_COMP){
+        cerr << "Cut-pursuit: number of balanced components (" <<
+            (size_t) rV + rV_new - rV_big << ") greater "
+            << "than can be represented by comp_t (" << MAX_NUM_COMP << ")"
+            << endl;
+        exit(EXIT_FAILURE);
+    }
+
+    /**  split big components and create balanced component list  **/
+    comp_t rV_bal = rV + rV_new - rV_big;
+    index_t* first_vertex_bal = (index_t*) malloc_check(sizeof(index_t)*
+        ((size_t) rV_bal + 1));
+    comp_t rv_new = 0;
+    for (comp_t rv = 0; rv < rV_big; rv++){
+        /* compute number and size of new components */
+        index_t comp_size = first_vertex[rv + 1] - first_vertex[rv];
+        const bool saturated = saturation(rv);
+        comp_t num = saturated ? 1 : (comp_size - 1)/max_comp_size + 1;
+        index_t new_comp_size = (comp_size - 1)/num + 1;
+        /* record first vertex of each new component and flag saturation */
+        for (index_t first = first_vertex[rv];
+            first < first_vertex[rv + 1]; first += new_comp_size){
+            first_vertex_bal[rv_new++] = first;
+            if (!saturated){ G->nodes[comp_list[first]].saturation = false; }
+        }
+    }
+    /* add the small components */
+    for (comp_t rv = rV_big; rv <= rV; rv++){
+        first_vertex_bal[rv + rV_new - rV_big] = first_vertex[rv];
+    }
+
+    /**  set parallel cut separation on edges between new components  **/
+    /* assign each vertex of each new component to its new component */
+    #pragma omp parallel for schedule(static) \
+        NUM_THREADS(first_vertex_bal[rV_new], rV_new)
+    for (comp_t rv_new = 0; rv_new < rV_new; rv_new++){
+        for (index_t i = first_vertex_bal[rv_new];
+            i < first_vertex_bal[rv_new + 1]; i++){
+            comp_assign[comp_list[i]] = rv_new;
+        }
+    }
+    #pragma omp parallel for schedule(static) \
+        NUM_THREADS(first_vertex_bal[rV_new], rV_new)
+    for (comp_t rv_new = 0; rv_new < rV_new; rv_new++){
+        for (index_t i = first_vertex_bal[rv_new];
+             i < first_vertex_bal[rv_new + 1]; i++){
+            index_t v = comp_list[i];
+            for (index_t e = first_edge[v]; e < first_edge[v + 1]; e++){
+                if (is_free(e) && rv_new != comp_assign[adj_vertices[e]]){
+                    set_par_sep(e);
+                }
+            }
+        }
+    }
+
+    /**  duplicate component values accordingly  **/
+    rX = (value_t*) realloc_check(rX, sizeof(value_t)*D*rV_bal);
+    /* small components; in-place, start by the end */
+    for (comp_t rv = rV; rv > rV_big; rv--){
+        value_t* rXv = rX + D*(rv - 1);
+        value_t* rXv_bal = rXv + D*(rV_new - rV_big);
+        for (size_t d = 0; d < D; d++){ rXv_bal[d] = rXv[d]; }
+    }
+    /* big components; in-place, slightly more complicated */
+    rv_new = rV_new;
+    for (comp_t rv = rV_big; rv > 0; rv--){
+        value_t* rXv = rX + D*(rv - 1);
+        for(; first_vertex_bal[rv_new] > first_vertex[rv - 1]; rv_new--){
+            value_t* rXv_bal = rX + D*(rv_new - 1);
+            for (size_t d = 0; d < D; d++){ rXv_bal[d] = rXv[d]; }
+        }
+    }
+
+    /**  replace the component list by the balanced one  **/
+    first_vertex_big = (index_t*) realloc_check(first_vertex,
+        sizeof(index_t)*(rV_big + 1));
+    first_vertex = first_vertex_bal;
+    rV = rV_bal;
+
+    return num_thrds;
+}
+
+TPL index_t CP::revert_balance_parallel_split(comp_t rV_new, comp_t rV_big, 
+    index_t* first_vertex_big)
+{
+    if (rV_new == rV_big){ return 0; }
+
+    index_t activation = remove_parallel_separations(rV_new);
+
+    index_t* first_vertex_bal = first_vertex; // make clear which one is which
+    comp_t rV_ini = rV - rV_new + rV_big;
+
+    /* each new component which has not been cut is declared saturated;
+     * however, if any new component from the same original large component
+     * has been cut, the original large component should not be saturated;
+     * since saturaton is flagged on the first vertex of the component,
+     * it might be necessary to change the flag */
+    comp_t rv_new = 0;
+    for (comp_t rv = 0; rv < rV_big; rv++){
+        for (; first_vertex_bal[rv_new] < first_vertex_big[rv + 1]; rv_new++){
+            if (!saturation(rv_new)){
+                G->nodes[comp_list[first_vertex_big[rv]]].saturation = false;
+            }
+        }
+    }
+
+    /**  remove duplicated component values  **/
+    /* big components */
+    rv_new = 0;
+    for (comp_t rv = 0; rv < rV_big; rv++){
+        value_t* rXv = rX + D*rv;
+        value_t* rXv_bal = rX + D*rv_new;
+        for (size_t d = 0; d < D; d++){ rXv[d] = rXv_bal[d]; }
+        while (first_vertex_bal[rv_new] < first_vertex_big[rv + 1]){
+            rv_new++;
+        }
+    }
+    /* small components */
+    for (comp_t rv = rV_big; rv < rV_ini; rv++){
+        value_t* rXv = rX + D*rv;
+        value_t* rXv_bal = rXv + D*(rV_new - rV_big);
+        for (size_t d = 0; d < D; d++){ rXv[d] = rXv_bal[d]; }
+    }
+    rX = (value_t*) realloc_check(rX, sizeof(value_t)*D*rV_ini);
+
+    /**  revert to initial component list  **/
+    /* big components */
+    for (comp_t rv = 0; rv < rV_big; rv++){
+        first_vertex[rv] = first_vertex_big[rv];
+    }
+    /* small components; in-place */
+    for (comp_t rv = rV_big; rv <= rV; rv++){
+        first_vertex[rv] = first_vertex[rv + rV_new - rV_big];
+    }
+    first_vertex = (index_t*) realloc_check(first_vertex,
+        sizeof(index_t)*rVp1);
+    free(first_vertex_big);
+    rV = rV_ini;
+
+    return activation;
+}
+
 TPL index_t CP::split()
 {
     index_t activation = 0;
 
-    /**  refine components in parallel  **/
-    #pragma omp parallel NUM_THREADS(split_complexity(), rV) \
-        reduction(+:activation)
+    comp_t rV_new, rV_big;
+    index_t* first_vertex_big;
+    int num_thrds = balance_parallel_split(rV_new, rV_big, first_vertex_big);
+
+    #pragma omp parallel num_threads(num_thrds) reduction(+:activation)
     {
         Cp_graph<real_t, index_t, comp_t>* Gpar = get_parallel_flow_graph();
 
         #pragma omp for schedule(dynamic)
         for (comp_t rv = 0; rv < rV; rv++){
-            if (is_saturated(rv)){ continue; }
-            index_t rv_activation = 0;
+            if (saturation(rv)){ continue; }
 
             split_component(Gpar, rv);
 
-            /* activate edges correspondingly */
+            index_t rv_activation = 0;
+            /* activate edges accordingly */
             for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
                 index_t v = comp_list[i];
+                comp_t l = label_assign[v];
                 for (index_t e = first_edge[v]; e < first_edge[v + 1]; e++){
-                    if (!is_active(e) &&
-                        label_assign[v] != label_assign[adj_vertices[e]]){
+                    if (is_free(e) && l != label_assign[adj_vertices[e]]){
                         set_active(e);
                         rv_activation++;
                     }
                 }
             }
 
-            set_saturation(rv, rv_activation == 0);
+            saturation(rv) = rv_activation == 0;
             activation += rv_activation;
-
-            /* reconstruct comp_assign */
-            for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
-                comp_assign[comp_list[i]] = rv;
-            }
         }
 
         delete Gpar;
     } // end parallel region
 
+    activation += revert_balance_parallel_split(rV_new, rV_big,
+        first_vertex_big);
+
+    /* reconstruct components assignment */
+    #pragma omp parallel for schedule(static) NUM_THREADS(V, rV)
+    for (comp_t rv = 0; rv < rV; rv++){
+        for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
+            comp_assign[comp_list[i]] = rv;
+        }
+    }
+ 
     return activation;
 }
 
@@ -640,7 +830,7 @@ TPL index_t CP::merge()
         }
         for (comp_t ru = 0; ru < rV; ru++){
             if (merge_chains_root[ru] != CHAIN_ROOT){ continue; }
-            comp_t last_ru = get_tmp_comp_assign(comp_list[first_vertex[ru]]);
+            comp_t last_ru = tmp_comp_assign(comp_list[first_vertex[ru]]);
             if (saturation_flag[last_ru] == NOT_ASSIGNED){
                 saturation_flag[last_ru] = ASSIGNED;
             }else{ /* was already assigned another final component */
@@ -649,8 +839,7 @@ TPL index_t CP::merge()
             /* run along the merge chain */
             comp_t rv = ru; 
             while (rv != CHAIN_LEAF){
-                comp_t last_rv =
-                    get_tmp_comp_assign(comp_list[first_vertex[rv]]);
+                comp_t last_rv = tmp_comp_assign(comp_list[first_vertex[rv]]);
                 if (last_ru != last_rv){ /* previous components do not agree */
                     saturation_flag[last_ru] = saturation_flag[last_rv] =
                         NOT_SATURATED;
@@ -658,43 +847,28 @@ TPL index_t CP::merge()
                 rv = merge_chains_next[rv];
             }
         }
-        /* flag each root component with the saturation of its corresponding
-         * previous component; can be done in-place because rv >= last_rv;
-         * this allows for reusing the same storage for final comp below */
-        for (comp_t rv = rV; rv > 0;){
-            rv--;
-            if (merge_chains_root[rv] != CHAIN_ROOT){ continue; }
-            comp_t last_rv = get_tmp_comp_assign(comp_list[first_vertex[rv]]);
-            saturation_flag[rv] = saturation_flag[last_rv];
-        }
-    }else{ // last_rV is zero, indicating no previous assignment
-        for (comp_t rv = 0; rv < rV; rv++){
-            if (merge_chains_root[rv] == CHAIN_ROOT){
-                saturation_flag[rv] = NOT_SATURATED;
-            }
-        }
     }
 
     /**  construct the final component lists in temporary storage, update
      **  components values and first vertex indices in-place, and flag final
      **  saturation  **/
-    saturation_count = 0;
+    saturated_comp = 0;
+    saturated_vert = 0;
     comp_t rn = 0; // component number
     index_t i = 0; // index in the final comp_list
-    /* each current component is assigned its final component */
-    comp_t* final_comp = merge_chains_leaf; // reuse storage in-place
+    /* each current component is assigned its final component;
+     * this can use the same storage as merge chains root, because the only
+     * required information is to flag roots (no need to get back to roots),
+     * and roots are processed before getting assigned a final component */
+    comp_t* final_comp = merge_chains_root;
     for (comp_t ru = 0; ru < rV; ru++){
         if (merge_chains_root[ru] != CHAIN_ROOT){ continue; }
         /**  ru is a root, create the corresponding final component  **/
-        /* saturation flagged on first vertex of ru, also first vertex of rn;
-         * note also that final comp uses the same storage as saturation flag,
-         * but there is no conflict because ru is a root, untouched so far */
-        if (saturation_flag[ru] == ASSIGNED){
-            saturation_count++;
-            set_saturation(ru, true); 
-        }else{
-            set_saturation(ru, false);
-        }
+        /* saturation flagged on first vertex of ru, also first vertex of rn */
+        const bool saturated = last_rV && // previous info available if nonzero
+            saturation_flag[tmp_comp_assign(comp_list[first_vertex[ru]])];
+        if (saturated){ saturated_comp++; }
+        saturation(ru) = saturated;
         /* copy component value, in-place because rn <= ru guaranteed */
         const value_t* rXu = rX + D*ru;
         value_t* rXn = rX + D*rn;
@@ -706,7 +880,10 @@ TPL index_t CP::merge()
             final_comp[rv] = rn;
             /* assign all vertices to final component */ 
             for (index_t j = first_vertex[rv]; j < first_vertex[rv + 1]; j++){
-                set_tmp_comp_list(i++, comp_list[j]);
+                tmp_comp_list(i++) = comp_list[j];
+            }
+            if (saturated){
+                saturated_vert += first_vertex[rv + 1] - first_vertex[rv];
             }
             rv = merge_chains_next[rv];
         }
@@ -724,7 +901,7 @@ TPL index_t CP::merge()
     rX = (value_t*) realloc_check(rX, sizeof(value_t)*D*rV);
     /* update components assignments */
     for (index_t v = 0; v < V; v++){ 
-        comp_list[v] = get_tmp_comp_list(v);
+        comp_list[v] = tmp_comp_list(v);
         comp_assign[v] = final_comp[comp_assign[v]];
     }
 

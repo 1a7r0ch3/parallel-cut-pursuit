@@ -17,10 +17,13 @@
 
     /* num_ops is a rough estimation of the total number of operations 
      * max_threads is the maximum number of jobs performed in parallel */
-    static inline int compute_num_threads(uintmax_t num_ops, \
+    static inline int compute_num_threads(uintmax_t num_ops,
         uintmax_t max_threads)
     {
         uintmax_t num_threads = num_ops/MIN_OPS_PER_THREAD;
+        if (num_threads > (unsigned) omp_get_max_threads()){
+            num_threads = omp_get_max_threads();
+        }
         if (num_threads > (unsigned) omp_get_num_procs()){
             num_threads = omp_get_num_procs();
         }

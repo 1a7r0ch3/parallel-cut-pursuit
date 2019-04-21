@@ -18,7 +18,7 @@
 #pragma once
 #include <limits>
 
-/**   macros common to all versions  **/
+/**  macros common to all versions  **/
 #define SWAP(i, j) auto tmp = ARRAY[i]; ARRAY[i] = ARRAY[j]; ARRAY[j] = tmp
 #define VALUE(i) values[IDX(i)]
 #define COMP(i, j) (VALUE(i) < VALUE(j))

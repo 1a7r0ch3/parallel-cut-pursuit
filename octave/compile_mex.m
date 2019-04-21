@@ -11,9 +11,10 @@ try
     if LDFLAGS(end)==10, LDFLAGS = LDFLAGS(1:end-1); end
     CXXFLAGSorig = CXXFLAGS;
     LDFLAGSorig = LDFLAGS;
+    % -D_GLIBCXX_PARALLEL is only useful for libstdc++ users
     CXXFLAGS = sprintf('%s %s', CXXFLAGS, ...
-        '-Wextra -Wpedantic -std=c++11 -fopenmp');
-    LDFLAGS = sprintf('%s %s', LDFLAGS, '-fopenmp');
+        '-Wextra -Wpedantic -std=c++11 -fopenmp -D_GLIBCXX_PARALLEL');
+    LDFLAGS = sprintf('%s,%s', LDFLAGS, '-fopenmp');
     setenv('CXXFLAGS', CXXFLAGS);
     setenv('LDFLAGS', LDFLAGS);
 
@@ -27,7 +28,7 @@ try
     clear cp_pfdr_d1_ql1b_mex
     %}
 
-    %{
+    % %{
     mex mex/cp_pfdr_d1_lsx_mex.cpp ../src/cp_pfdr_d1_lsx.cpp ...
         ../src/cut_pursuit_d1.cpp ../src/cut_pursuit.cpp ...
         ../src/cp_graph.cpp ../src/pfdr_d1_lsx.cpp ../src/proj_simplex.cpp ...
@@ -37,7 +38,7 @@ try
     clear cp_pfdr_d1_lsx_mex
     %}
 
-    %{
+    % %{
     mex mex/cp_kmpp_d0_dist_mex.cpp ../src/cp_kmpp_d0_dist.cpp ...
         ../src/cut_pursuit_d0.cpp ../src/cut_pursuit.cpp ...
         ../src/cp_graph.cpp -output bin/cp_kmpp_d0_dist_mex

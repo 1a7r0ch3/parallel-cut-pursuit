@@ -27,6 +27,8 @@ split_iter_num = 2;
 kmpp_init_num = 3;
 kmpp_iter_num = 3;
 verbose = 1;
+max_num_threads = 0;
+balance_parallel_split = true;
 
 %%%  initialize data  %%%
 % For details on the data and parameters, see H. Raguet, A Note on the
@@ -51,7 +53,8 @@ tic;
 vert_weights = []; coor_weights = [];
 [Comp, rX] = cp_kmpp_d0_dist_mex(loss, y, first_edge, adj_vertices, ...
     homo_d0_weight, vert_weights, coor_weights, cp_dif_tol, cp_it_max, ...
-    K, split_iter_num, kmpp_init_num, kmpp_iter_num, verbose);
+    K, split_iter_num, kmpp_init_num, kmpp_iter_num, verbose, ...
+    max_num_threads, balance_parallel_split);
 time = toc;
 x = rX(:, Comp+1); % rX is components values, Comp is components assignments
 clear Comp rX;

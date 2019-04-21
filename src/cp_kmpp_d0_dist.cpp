@@ -3,7 +3,6 @@
  *===========================================================================*/
 #include <random>
 #include "../include/cp_kmpp_d0_dist.hpp"
-#include "../include/omp_num_threads.hpp"
 
 #define ZERO ((real_t) 0.0)
 #define ONE ((real_t) 1.0)
@@ -95,6 +94,15 @@ TPL void CP_D0_DIST::solve_reduced_problem()
     }
 }
 
+TPL uintmax_t CP_D0_DIST::split_values_complexity()
+{
+    uintmax_t complexity = (uintmax_t) K*V; // draw initialization
+    complexity += D*K*V*2*kmpp_iter_num; // k-means
+    complexity *= kmpp_init_num; // repetition
+    complexity += D*K*V*(split_iter_num - 1); // update centroids
+    return complexity;
+}
+
 TPL void CP_D0_DIST::init_split_values(comp_t rv, real_t* altX)
 {
     index_t comp_size = first_vertex[rv + 1] - first_vertex[rv];
@@ -172,7 +180,7 @@ TPL void CP_D0_DIST::init_split_values(comp_t rv, real_t* altX)
             for (size_t dk = 0; dk < D*K; dk++){ altX[dk] = centroids[dk]; }
             for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
                 index_t v = comp_list[i];
-                set_tmp_comp_assign(v, label_assign[v]);
+                tmp_comp_assign(v) = label_assign[v];
             }
         }
 
@@ -185,7 +193,7 @@ TPL void CP_D0_DIST::init_split_values(comp_t rv, real_t* altX)
     /**  copy best label assignment  **/
     for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
         index_t v = comp_list[i];
-        label_assign[v] = get_tmp_comp_assign(v);
+        label_assign[v] = tmp_comp_assign(v);
     }
 }
 
@@ -288,14 +296,14 @@ TPL real_t CP_D0_DIST::compute_evolution(bool compute_dif)
     if (!compute_dif){ return INF_REAL; }
     real_t dif = ZERO;
     #pragma omp parallel for schedule(dynamic) reduction(+:dif) \
-        NUM_THREADS(D*V*(rV - saturation_count)/rV, rV)
+        NUM_THREADS(D*(V - saturated_vert), rV)
     for (comp_t rv = 0; rv < rV; rv++){
-        if (is_saturated(rv)){ continue; }
+        if (saturation(rv)){ continue; }
         real_t* rXv = rX + D*rv;
         real_t distXX = loss == QUADRATIC ? ZERO : distance(rXv, rXv);
         for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
             index_t v = comp_list[i];
-            real_t* lrXv = last_rX + D*get_tmp_comp_assign(v);
+            real_t* lrXv = last_rX + D*tmp_comp_assign(v);
             dif += VERT_WEIGHTS_(v)*(distance(rXv, lrXv) - distXX);
         }
     }

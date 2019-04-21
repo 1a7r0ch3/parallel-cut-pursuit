@@ -1,12 +1,13 @@
 function [Comp, rX, it, Obj, Time, Dif] = cp_kmpp_d0_dist_mex(loss, Y, ...
     first_edge, adj_vertices, edge_weights, vert_weights, coor_weights, ...
     cp_dif_tol, cp_it_max, K, split_iter_num, kmpp_init_num, kmpp_iter_num, ...
-    verbose)
+    verbose, max_num_threads, balance_parallel_split)
 %
 %        [Comp, rX, it, Obj, Time, Dif] = cp_kmpp_d0_dist_mex(loss, Y,
 %   first_edge, adj_vertices, edge_weights = 1.0, vert_weights = [],
 %   coor_weights = [], cp_dif_tol = 1e-3, cp_it_max = 10, K = 2,
-%   split_iter_num = 2, kmpp_init_num = 3, kmpp_iter_num = 3, verbose = 1)
+%   split_iter_num = 2, kmpp_init_num = 3, kmpp_iter_num = 3, verbose = 1,
+%   max_num_threads = 0, balance_parallel_split = true)
 %
 % Cut-pursuit algorithm with d0 (weighted contour length) penalization, with a
 % loss akin to a distance:
@@ -57,22 +58,22 @@ function [Comp, rX, it, Obj, Time, Dif] = cp_kmpp_d0_dist_mex(loss, Y, ...
 % expected (recompilation is necessary)
 %
 % loss - 1 for quadratic, 0 < loss < 1 for smoothed Kullback-Leibler
-% Y - observations, (real) D-by-V array, column-major format (for
-%     Kullback-Leibler loss, observation at each vertex is supposed to lie on
-%     the probability simplex); 
+% Y - observations, (real) D-by-V array, column-major format;
+%     for Kullback-Leibler loss, the value at each vertex is supposed to lie on
+%     the probability simplex 
 % first_edge, adj_vertices - graph forward-star representation:
 %     edges are numeroted (C-style indexing) so that all vertices originating
 %         from a same vertex are consecutive;
 %     for each vertex, 'first_edge' indicates the first edge starting from the
 %         vertex (or, if there are none, starting from the next vertex);
-%         array of length V+1 (uint32), the last value is the total number of
-%         edges;
+%         array of length V + 1 (uint32), the first value is always zero and
+%         the last value is always the total number of edges;
 %     for each edge, 'adj_vertices' indicates its ending vertex, array of 
 %         length E (uint32)
 % edge_weights - (real) array of length E or scalar for homogeneous weights
-% vert_weights - weights on vertices (w_v in above notations)
+% vert_weights - weights on vertices (w_v in above notations);
 %     (real) array of length V or empty for no weights
-% coor_weights - weights on coordinates (m_d above notations)
+% coor_weights - weights on coordinates (m_d above notations);
 %     (real) array of length D or empty for no weights
 % cp_dif_tol - stopping criterion on iterate evolution; algorithm stops if
 %     relative changes (that is, relative dissimilarity measures defined by the
@@ -84,20 +85,20 @@ function [Comp, rX, it, Obj, Time, Dif] = cp_kmpp_d0_dist_mex(loss, Y, ...
 % split_iter_num - number of partition-and-update iterations in the split step
 % kmpp_init_num - number of random k-means initializations in the split step
 % kmpp_iter_num - number of k-means iterations in the split step
-% verbose      - if nonzero, display information on the progress
+% verbose - if nonzero, display information on the progress
 %
 % OUTPUTS: indices are C-style (start at 0)
 %
 % Comp - assignement of each vertex to a component, array of length V (uint16)
-% rX   - values of each component of the minimizer, array of length rV (real);
-%        the actual minimizer is then reconstructed as X = rX(Comp + 1);
-% it   - actual number of cut-pursuit iterations performed
-% Obj  - the values of the objective functional along iterations (array of
-%        length it + 1)
-% Time - if requested, the elapsed time along iterations (array of length
-%        cp_it + 1)
-% Dif  - if requested, the iterate evolution along iterations
-%        (array of length cp_it)
+% rX - values of each component of the minimizer, array of length rV (real);
+%     the actual minimizer can be reconstructed with X = rX(Comp + 1);
+% it - actual number of cut-pursuit iterations performed
+% Obj - the values of the objective functional along iterations;
+%     array of length it + 1
+% Time - if requested, the elapsed time along iterations;
+%     array of length cp_it + 1
+% Dif  - if requested, the iterate evolution along iterations;
+%     array of length cp_it
 % 
 % Parallel implementation with OpenMP API.
 %
@@ -107,6 +108,6 @@ function [Comp, rX, it, Obj, Time, Dif] = cp_kmpp_d0_dist_mex(loss, Y, ...
 %
 % L. Landrieu et al., A structured regularization framework for spatially
 % smoothing semantic labelings of 3D point clouds, ISPRS Journal of
-% Photogrammetry and Remote Sensing, 132:102-118, 2017%
+% Photogrammetry and Remote Sensing, 132:102-118, 2017
 %
 % Hugo Raguet 2019

@@ -1,13 +1,15 @@
 function [Comp, rX, cp_it, Obj, Time, Dif] = cp_pfdr_d1_lsx_mex(loss, Y, ...
     first_edge, adj_vertices, edge_weights, loss_weights, ...
     d1_coor_weights, cp_dif_tol, cp_it_max, pfdr_rho, pfdr_cond_min, ...
-    pfdr_dif_rcd, pfdr_dif_tol, pfdr_it_max, verbose)
+    pfdr_dif_rcd, pfdr_dif_tol, pfdr_it_max, verbose, max_num_threads, ...
+    balance_parallel_split)
 %
 %        [Comp, rX, cp_it, Obj, Time, Dif] = cp_pfdr_d1_lsx_mex(loss, Y,
 %   first_edge, adj_vertices, edge_weights = 1.0, loss_weights = [],
 %   d1_coor_weights = [], cp_dif_tol = 1e-3, cp_it_max = 10, pfdr_rho = 1.0,
 %   pfdr_cond_min = 1e-2, pfdr_dif_rcd = 0.0, pfdr_dif_tol = 1e-3*cp_dif_tol,
-%   pfdr_it_max = 1e4, verbose = 1e2)
+%   pfdr_it_max = 1e4, verbose = 1e2, max_num_threads = 0,
+%   balance_parallel_split = true)
 %
 % Cut-pursuit algorithm with d1 (total variation) penalization, with a
 % separable loss term and simplex constraints:
@@ -61,15 +63,15 @@ function [Comp, rX, cp_it, Obj, Time, Dif] = cp_pfdr_d1_lsx_mex(loss, Y, ...
 %
 % loss - 0 for linear, 1 for quadratic, 0 < loss < 1 for smoothed
 %     Kullback-Leibler (see above)
-% Y - observations, (real) D-by-V array, column-major format (at each
-%     vertex, supposed to lie on the probability simplex)
+% Y - observations, (real) D-by-V array, column-major format;
+%     the value at each vertex is supposed to lie on the probability simplex
 % first_edge, adj_vertices - graph forward-star representation:
 %     edges are numeroted (C-style indexing) so that all vertices originating
 %         from a same vertex are consecutive;
 %     for each vertex, 'first_edge' indicates the first edge starting from the
 %         vertex (or, if there are none, starting from the next vertex);
-%         array of length V+1 (uint32), the last value is the total number of
-%         edges;
+%         array of length V + 1 (uint32), the first value is always zero and
+%         the last value is always the total number of edges;
 %     for each edge, 'adj_vertices' indicates its ending vertex, array of 
 %         length E (uint32)
 % edge_weights - (real) array of length E or scalar for homogeneous weights
@@ -80,40 +82,43 @@ function [Comp, rX, cp_it, Obj, Time, Dif] = cp_pfdr_d1_lsx_mex(loss, Y, ...
 %     it is advised to normalize the weights so that the first value is unity
 % cp_dif_tol - stopping criterion on iterate evolution; algorithm stops if
 %     relative changes (in Euclidean norm) is less than dif_tol;
-%     1e-3 is a typical value; a lower one can give better precision
-%     but with longer computational time and more final components
-% cp_it_max - maximum number of iterations (graph cut and subproblem)
+%     1e-3 is a typical value; a lower one can give better precision but with
+%     longer computational time and more final components
+% cp_it_max - maximum number of iterations (graph cut and subproblem);
 %     10 cuts solve accurately most problems
-% pfdr_rho - relaxation parameter, 0 < rho < 2
+% pfdr_rho - relaxation parameter, 0 < rho < 2;
 %     1 is a conservative value; 1.5 often speeds up convergence
 % pfdr_cond_min - stability of preconditioning; 0 < cond_min < 1;
 %     corresponds roughly the minimum ratio to the maximum descent metric;
 %     1e-2 is typical; a smaller value might enhance preconditioning
 % pfdr_dif_rcd - reconditioning criterion on iterate evolution;
 %     a reconditioning is performed if relative changes of the iterate drops
-%     below dif_rcd;
-%     warning: reconditioning might temporarily draw minimizer away from
-%     solution, and give bad subproblem solutions
+%     below dif_rcd; WARNING: reconditioning might temporarily draw minimizer
+%     away from solution, and give bad subproblem solutions
 % pfdr_dif_tol - stopping criterion on iterate evolution; algorithm stops if
-%     relative changes (in Euclidean norm) is less than dif_tol
+%     relative changes (in Euclidean norm) is less than dif_tol;
 %     1e-3*cp_dif_tol is a conservative value
-% pfdr_it_max - maximum number of iterations
+% pfdr_it_max - maximum number of iterations;
 %     1e4 iterations provides enough precision for most subproblems
+% max_num_threads - if greater than zero, set the maximum number of threads
+%     used for parallelization with OpenMP
+% balance_parallel_split - if true, the parallel workload of the split step 
+%     is balanced; WARNING: this might trades off speed against optimality
 % verbose - if nonzero, display information on the progress, every 'verbose'
 %     PFDR iterations
 %
 % OUTPUTS: indices are C-style (start at 0)
 %
 % Comp - assignement of each vertex to a component, array of length V (uint16)
-% rX   - values of each component of the minimizer, array of length rV (real);
-%        the actual minimizer is then reconstructed as X = rX(Comp + 1);
+% rX - values of each component of the minimizer, array of length rV (real);
+%     the actual minimizer can be reconstructed with X = rX(Comp + 1)
 % cp_it - actual number of cut-pursuit iterations performed
-% Obj  - the values of the objective functional along iterations (array of
-%        length cp_it + 1)
-% Time - if requested, the elapsed time along iterations (array of length
-%        cp_it + 1)
-% Dif  - if requested, the iterate evolution along iterations
-%        (array of length cp_it)
+% Obj  - the values of the objective functional along iterations;
+%     array of length cp_it + 1
+% Time - if requested, the elapsed time along iterations;
+%     array of length cp_it + 1
+% Dif  - if requested, the iterate evolution along iterations;
+%     array of length cp_it
 % 
 % Parallel implementation with OpenMP API.
 %

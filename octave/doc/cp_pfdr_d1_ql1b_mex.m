@@ -1,17 +1,18 @@
 function [Comp, rX, cp_it, Obj, Time, Dif] = cp_pfdr_d1_ql1b_mex(Y, A, ...
     first_edge, adj_vertices, edge_weights, Yl1, l1_weights, low_bnd, ...
     upp_bnd, cp_dif_tol, cp_it_max, pfdr_rho, pfdr_cond_min, pfdr_dif_rcd, ...
-    pfdr_dif_tol, pfdr_it_max, verbose, AtA_if_square)
+    pfdr_dif_tol, pfdr_it_max, verbose, max_num_threads, ...
+    balance_parallel_split, AtA_if_square)
 %
 %       [Comp, rX, cp_it, Obj, Time, Dif] = cp_pfdr_d1_ql1b_mex(Y | AtY,
 %    A | AtA, first_edge, adj_vertices, edge_weights = 1.0, Yl1 = [],
 %   l1_weights = 0.0, low_bnd = -Inf, upp_bnd = Inf, cp_dif_tol = 1e-5,
 %   cp_it_max = 10, pfdr_rho = 1., pfdr_cond_min = 1e-2, pfdr_dif_rcd = 0.,
 %   pfdr_dif_tol = 1e-3*cp_dif_tol, pfdr_it_max = 1e4, verbose = 1e3,
-%   AtA_if_square = true)
+%   max_num_threads = 0, balance_parallel_split = true, AtA_if_square = true)
 %
-% Cut-pursuit algorithm with d1 (total variation) penalization, with a quadratic
-% functional, l1 penalization and box constraints:
+% Cut-pursuit algorithm with d1 (total variation) penalization, with a 
+% quadratic functional, l1 penalization and box constraints:
 %
 % minimize functional over a graph G = (V, E)
 %
@@ -57,59 +58,61 @@ function [Comp, rX, cp_it, Obj, Time, Dif] = cp_pfdr_d1_ql1b_mex(Y, A, ...
 %         from a same vertex are consecutive;
 %     for each vertex, 'first_edge' indicates the first edge starting from the
 %         vertex (or, if there are none, starting from the next vertex);
-%         array of length V+1 (uint32), the last value is the total number of
-%         edges;
+%         array of length V + 1 (uint32), the first value is always zero and
+%         the last value is always the total number of edges;
 %     for each edge, 'adj_vertices' indicates its ending vertex, array of 
 %         length E (uint32)
 % edge_weights - array of length E or scalar for homogeneous weights (real)
-% Yl1        - offset for l1 penalty, (real) array of length V,
-%              or empty matrix (for all zeros)
-% l1_weights - array of length V or scalar for homogeneous weights (real)
-%              set to zero for no l1 penalization 
-% low_bnd    - array of length V or scalar (real)
-%              set to negative infinity for no lower bound
-% upp_bnd    - array of length V or scalar (real)
-%              set to positive infinity for no upper bound
+% Yl1 - offset for l1 penalty, (real) array of length V, or empty matrix (for
+%     all zeros)
+% l1_weights - array of length V or scalar for homogeneous weights (real);
+%     set to zero for no l1 penalization 
+% low_bnd - array of length V or scalar (real);
+%     set to negative infinity for no lower bound
+% upp_bnd - array of length V or scalar (real);
+%     set to positive infinity for no upper bound
 % cp_dif_tol - stopping criterion on iterate evolution; algorithm stops if
-%              relative changes (in Euclidean norm) is less than dif_tol;
-%              1e-4 is a typical value; a lower one can give better precision
-%              but with longer computational time and more final components
-% cp_it_max  - maximum number of iterations (graph cut and subproblem)
-%              10 cuts solve accurately most problems
-% pfdr_rho   - relaxation parameter, 0 < rho < 2
-%              1 is a conservative value; 1.5 often speeds up convergence
+%     relative changes (in Euclidean norm) is less than dif_tol;
+%     1e-4 is a typical value; a lower one can give better precision but with
+%     longer computational time and more final components
+% cp_it_max - maximum number of iterations (graph cut and subproblem);
+%     10 cuts solve accurately most problems
+% pfdr_rho - relaxation parameter, 0 < rho < 2;
+%     1 is a conservative value; 1.5 often speeds up convergence
 % pfdr_cond_min - stability of preconditioning; 0 < cond_min < 1;
-%                 corresponds roughly the minimum ratio to the maximum descent
-%                 metric; 1e-2 is typical; a smaller value might enhance
-%                 preconditioning
+%     corresponds roughly the minimum ratio to the maximum descent metric;
+%     1e-2 is typical, a smaller value might enhance preconditioning
 % pfdr_dif_rcd - reconditioning criterion on iterate evolution;
-%                a reconditioning is performed if relative changes of the
-%                iterate drops below dif_rcd
-%                warning: reconditioning might temporarily draw minimizer away
-%                from solution, and give bad subproblem solutions
+%     a reconditioning is performed if relative changes of the iterate drops
+%     below dif_rcd; WARNING: reconditioning might temporarily draw minimizer
+%     away from the solution, and give bad subproblem solutions
 % pfdr_dif_tol - stopping criterion on iterate evolution; algorithm stops if
-%                relative changes (in Euclidean norm) is less than dif_tol
-%                1e-3*cp_dif_tol is a conservative value
-% pfdr_it_max  - maximum number of iterations
-%                1e4 iterations provides enough precision for most subproblems
-% verbose      - if nonzero, display information on the progress, every
-%                'verbose' PFDR iterations
+%     relative changes (in Euclidean norm) is less than dif_tol;
+%     1e-3*cp_dif_tol is a conservative value
+% pfdr_it_max - maximum number of iterations;
+%     1e4 iterations provides enough precision for most subproblems
+% verbose - if nonzero, display information on the progress, every 'verbose'
+%     PFDR iterations
+% max_num_threads - if greater than zero, set the maximum number of threads
+%     used for parallelization with OpenMP
+% balance_parallel_split - if true, the parallel workload of the split step 
+%     is balanced; WARNING: this might trades off speed against optimality
 % AtA_if_square - if A is square, set this to false for direct matricial case
-%
 %
 % OUTPUTS: indices are C-style (start at 0)
 %
 % Comp - assignement of each vertex to a component, array of length V (uint16)
-% rX   - values of eachcomponents of the minimizer, array of length rV (real);
-%        the actual minimizer is then reconstructed as X = rX(Comp + 1);
+% rX - values of eachcomponents of the minimizer, array of length rV (real);
+%     the actual minimizer can be reconstructed with X = rX(Comp + 1);
 % cp_it - actual number of cut-pursuit iterations performed
-% Obj  - the values of the objective functional along iterations (array of
-%        length cp_it + 1) in the precomputed A^t A version, a constant
-%        1/2||Y||^2 in the quadratic part is omited
-% Time - if requested, the elapsed time along iterations
-%        (array of length cp_it + 1)
-% Dif  - if requested, the iterate evolution along iterations
-%        (array of length cp_it)
+% Obj - the values of the objective functional along iterations (array of
+%     length cp_it + 1); WARNING: in the precomputed A^t A version (including
+%     diagonal or identity case), a constant 1/2||Y||^2 in the quadratic part
+%     is omited
+% Time - if requested, the elapsed time along iterations;
+%     array of length cp_it + 1
+% Dif  - if requested, the iterate evolution along iterations;
+%     array of length cp_it
 % 
 % Parallel implementation with OpenMP API.
 %

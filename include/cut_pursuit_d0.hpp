@@ -66,7 +66,15 @@ protected:
     real_t compute_objective() override;
 
     /**  greedy splitting  **/
-    void split_component(comp_t rv) override;
+    /* rough estimate of the number of operations for split step;
+     * useful for estimating the number of parallel threads */
+    uintmax_t split_complexity() override;
+    void split_component(Cp_graph<real_t, index_t, comp_t>* G, comp_t rv)
+        override;
+
+    /* remove or activate separating edges used for balancing parallel
+     * workload; see header `cut_pursuit.hpp` */
+    index_t remove_parallel_separations(comp_t rV_new) override;
 
     comp_t K; // number of alternative values in the split
     int split_iter_num; // number of partition-and-update iterations
@@ -80,6 +88,9 @@ protected:
     virtual void init_split_values(comp_t rv, value_t* altX) = 0;
     virtual void update_split_values(comp_t rv, value_t* altX) = 0;
     virtual bool is_split_value(value_t altX) = 0;
+    /* rough estimate of the number of operations for initializing and
+     * updating the split values */
+    virtual uintmax_t split_values_complexity() = 0;
 
     /**  merging components  **/
 
@@ -146,19 +157,19 @@ protected:
     using Cp<real_t, index_t, comp_t>::rV;
     using Cp<real_t, index_t, comp_t>::rE;
     using Cp<real_t, index_t, comp_t>::comp_assign;
+    using Cp<real_t, index_t, comp_t>::label_assign;
     using Cp<real_t, index_t, comp_t>::comp_list;
     using Cp<real_t, index_t, comp_t>::first_vertex;
     using Cp<real_t, index_t, comp_t>::reduced_edge_weights;
     using Cp<real_t, index_t, comp_t>::reduced_edges;
-    using Cp<real_t, index_t, comp_t>::is_saturated;
+    using Cp<real_t, index_t, comp_t>::saturation;
+    using Cp<real_t, index_t, comp_t>::saturated_vert;
     using Cp<real_t, index_t, comp_t>::get_merge_chain_root;
     using Cp<real_t, index_t, comp_t>::merge_components;
     using Cp<real_t, index_t, comp_t>::malloc_check;
     using Cp<real_t, index_t, comp_t>::realloc_check;
 
 private:
-    index_t split() override;
-
     /* compute the merge chains and return the number of effective merges */
     comp_t compute_merge_chains() override;
     /* auxiliary functions for merge */
@@ -168,14 +179,15 @@ private:
     Merge_info reserved_merge_info;
 
     /**  type resolution for base template class members  **/
+    using Cp<real_t, index_t, comp_t>::maxflow_complexity;
     using Cp<real_t, index_t, comp_t>::get_parallel_flow_graph;
     using Cp<real_t, index_t, comp_t>::is_active;
+    using Cp<real_t, index_t, comp_t>::is_par_sep;
+    using Cp<real_t, index_t, comp_t>::is_free;
     using Cp<real_t, index_t, comp_t>::set_active;
+    using Cp<real_t, index_t, comp_t>::set_inactive;
     using Cp<real_t, index_t, comp_t>::is_sink;
-    using Cp<real_t, index_t, comp_t>::set_saturation;
     using Cp<real_t, index_t, comp_t>::set_edge_capacities;
-    using Cp<real_t, index_t, comp_t>::set_term_capacities;
-    using Cp<real_t, index_t, comp_t>::add_term_capacities;
-    using Cp<real_t, index_t, comp_t>::get_tmp_comp_list;
-    using Cp<real_t, index_t, comp_t>::set_tmp_comp_list;
+    using Cp<real_t, index_t, comp_t>::term_capacities;
+    using Cp<real_t, index_t, comp_t>::tmp_comp_list;
 };

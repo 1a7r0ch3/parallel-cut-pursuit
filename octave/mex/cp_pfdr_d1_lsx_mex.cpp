@@ -3,9 +3,10 @@
  *      adj_vertices, edge_weights = 1.0, loss_weights = [],
  *      d1_coor_weights = [], cp_dif_tol = 1e-3, cp_it_max = 10,
  *      pfdr_rho = 1.0, pfdr_cond_min = 1e-2, pfdr_dif_rcd = 0.0,
- *      pfdr_dif_tol = 1e-3*cp_dif_tol, pfdr_it_max = 1e4, verbose = 1e2)
+ *      pfdr_dif_tol = 1e-3*cp_dif_tol, pfdr_it_max = 1e4, verbose = 1e2,
+ *      max_num_threads = 0, balance_parallel_split = true)
  * 
- *  Hugo Raguet 2016, 2018
+ *  Hugo Raguet 2016, 2018, 2019
  *===========================================================================*/
 #include <cstdint>
 #include "mex.h"
@@ -109,6 +110,10 @@ static void cp_pfdr_d1_lsx_mex(int nlhs, mxArray **plhs, int nrhs, \
     real_t pfdr_dif_tol = (nrhs > 12) ? mxGetScalar(prhs[12]) : 1e-3*cp_dif_tol;
     int pfdr_it_max = (nrhs > 13) ? mxGetScalar(prhs[13]) : 1e4;
     int verbose = (nrhs > 14) ? mxGetScalar(prhs[14]) : 1e3;
+    int max_num_threads = (nrhs > 15 && mxGetScalar(prhs[15]) > 0) ?
+        mxGetScalar(prhs[15]) : omp_get_max_threads();
+    bool balance_parallel_split = (nrhs > 16) ?
+        mxIsLogicalScalarTrue(prhs[16]) : true;
 
     /**  prepare output; rX (plhs[1]) is created later  **/
 
@@ -133,11 +138,13 @@ static void cp_pfdr_d1_lsx_mex(int nlhs, mxArray **plhs, int nrhs, \
 
     cp->set_loss(loss, Y, loss_weights);
     cp->set_edge_weights(edge_weights, homo_edge_weight, d1_coor_weights);
-    cp->set_monitoring_arrays(Obj, Time, Dif);
-    cp->set_components(0, Comp);
     cp->set_cp_param(cp_dif_tol, cp_it_max, verbose);
     cp->set_pfdr_param(pfdr_rho, pfdr_cond_min, pfdr_dif_rcd, pfdr_it_max,
         pfdr_dif_tol);
+    cp->set_parallel_param(max_num_threads, balance_parallel_split);
+    cp->set_monitoring_arrays(Obj, Time, Dif);
+
+    cp->set_components(0, Comp); // use the preallocated component array Comp
 
     *it = cp->cut_pursuit();
 
