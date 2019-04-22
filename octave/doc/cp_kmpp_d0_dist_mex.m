@@ -86,6 +86,10 @@ function [Comp, rX, it, Obj, Time, Dif] = cp_kmpp_d0_dist_mex(loss, Y, ...
 % kmpp_init_num - number of random k-means initializations in the split step
 % kmpp_iter_num - number of k-means iterations in the split step
 % verbose - if nonzero, display information on the progress
+% max_num_threads - if greater than zero, set the maximum number of threads
+%     used for parallelization with OpenMP
+% balance_parallel_split - if true, the parallel workload of the split step 
+%     is balanced
 %
 % OUTPUTS: indices are C-style (start at 0)
 %

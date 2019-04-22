@@ -29,7 +29,7 @@ pfdr_dif_tol = 1e-3*cp_dif_tol;
 pfdr_it_max = 1e4;
 pfdr_verbose = 1e3;
 max_num_threads = 0;
-balance_parallel_split = true;
+balance_parallel_split = false;
 
 %%%  initialize data  %%%
 % dataset courtesy of Ahmad Karfoul and Isabelle Merlet, LTSI, INSERM U1099

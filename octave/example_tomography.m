@@ -10,8 +10,9 @@ cd(fileparts(which('example_tomography.m')));
 addpath('bin/');
 
 %%%  general parameters  %%%
-printResults = true; % requires color encapsulated postscript driver on your
-                     % system
+plotResults = false;
+printResults = false; % requires color encapsulated postscript driver on your
+                      % system
 
 %%%  parameters; see octave/doc/cp_pfdr_d1_ql1b_mex.m %%%
 cp_dif_tol = 1e-3;
@@ -22,6 +23,8 @@ pfdr_dif_rcd = 0;
 pfdr_dif_tol = 1e-1*cp_dif_tol;
 pfdr_it_max = 1e4;
 pfdr_verbose = 1e3;
+max_num_threads = 0;
+balance_parallel_split = false;
 
 %%%  initialize data  %%%
 % Simulated tomography: Shepp-Logan phantom 64x64 with 7 projections;
@@ -36,28 +39,31 @@ Yl1 = []; low_bnd = 0.0; upp_bnd = 1.0;
 [Comp, rX] = cp_pfdr_d1_ql1b_mex(y, A, first_edge, ...
     adj_vertices, d1_weights, Yl1, l1_weights, low_bnd, upp_bnd, ...
     cp_dif_tol, cp_it_max, pfdr_rho, pfdr_cond_min, pfdr_dif_rcd, ...
-    pfdr_dif_tol, pfdr_it_max, pfdr_verbose);
+    pfdr_dif_tol, pfdr_it_max, pfdr_verbose, max_num_threads, ...
+    balance_parallel_split);
 time = toc;
 x = rX(Comp + 1); % rX is components values, Comp is components assignment
 clear Comp rX;
-
 fprintf('Total MEX execution time %.1f s\n\n', time);
 
-%%% plot and print results  %%%
-figure(1), clf, colormap('gray');
-imagesc(x0); axis image; set(gca, 'Xtick', [], 'Ytick', []);
-title('ground truth');
-if printResults
-    fprintf('print ground truth... ');
-    print(gcf, '-depsc', 'tomography_ground_truth');
-    fprintf('done.\n');
-end
+if plotResults %%% plot and print results  %%%
+    figure(1), clf, colormap('gray');
+    imagesc(x0); axis image; set(gca, 'Xtick', [], 'Ytick', []);
+    title('ground truth');
+    if printResults
+        fprintf('print ground truth... ');
+        print(gcf, '-depsc', 'tomography_ground_truth');
+        fprintf('done.\n');
+    end
 
-figure(2), clf, colormap('gray');
-imagesc(reshape(x, size(x0))); axis image; set(gca, 'Xtick', [], 'Ytick', []);
-title('reconstruction');
-if printResults
-    fprintf('print reconstruction... ');
-    print(gcf, '-depsc', 'tomography_reconstruction');
-    fprintf('done.\n');
+    figure(2), clf, colormap('gray');
+    imagesc(reshape(x, size(x0))); axis image; set(gca, 'Xtick', [], ...
+        'Ytick', []);
+    title('reconstruction');
+    if printResults
+        fprintf('print reconstruction... ');
+        print(gcf, '-depsc', 'tomography_reconstruction');
+        fprintf('done.\n');
+    end
+
 end
