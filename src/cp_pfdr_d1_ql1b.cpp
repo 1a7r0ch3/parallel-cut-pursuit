@@ -34,7 +34,7 @@ TPL CP_D1_QL1B::Cp_d1_ql1b(index_t V, index_t E, const index_t* first_edge,
     low_bnd = nullptr; homo_low_bnd = -INF_REAL;
     upp_bnd = nullptr; homo_upp_bnd = INF_REAL;
 
-    pfdr_rho = 1.0; pfdr_cond_min = 1e-3; pfdr_dif_rcd = 0.0;
+    pfdr_rho = 1.0; pfdr_cond_min = 1e-2; pfdr_dif_rcd = 0.0;
     pfdr_dif_tol = 1e-3*dif_tol; pfdr_it = pfdr_it_max = 1e4;
 
     /* it makes sense to consider nonevolving components as saturated;
@@ -353,7 +353,7 @@ TPL index_t CP_D1_QL1B::split()
 
     uintmax_t Vns = V - saturated_vert;
     uintmax_t num_ops = Vns*(!IS_ATA(N) ? N : N == FULL_ATA ? V : 1);
-    num_ops += E*Vns/V;
+    // num_ops += E*Vns/V;
     num_ops += Vns/V;
 
     #pragma omp parallel for schedule(static) NUM_THREADS(num_ops, V)
@@ -378,26 +378,33 @@ TPL index_t CP_D1_QL1B::split()
             }
             grad[v] -= Y_(v);
         }else if (A){ /* diagonal case, grad = (A^t A) X - A^t Y */
-            grad[v] = A[v]*rX[rv] - Y_(v);
+            grad[v] += A[v]*rX[rv] - Y_(v);
         }else if (a){ /* identity matrix */
-            grad[v] = rX[rv] - Y_(v);
-        }
-
-        /**  differentiable d1 contribution  **/ 
-        for (index_t e = first_edge[v]; e < first_edge[v + 1]; e++){
-            if (is_active(e)){
-                index_t u = adj_vertices[e];
-                real_t grad_d1 = rX[comp_assign[v]] > rX[comp_assign[u]] ?
-                    EDGE_WEIGHTS_(e) : -EDGE_WEIGHTS_(e);
-                grad[v] += grad_d1;
-                grad[u] -= grad_d1;
-            }
+            grad[v] += rX[rv] - Y_(v);
         }
 
         /**  differentiable l1 contribution  **/
         if (l1_weights || homo_l1_weight){
             if (rX[rv] > Yl1_(v)){ grad[v] += L1_WEIGHTS_(v); }
             else if (rX[rv] < Yl1_(v)){ grad[v] -= L1_WEIGHTS_(v); }
+        }
+    }
+
+    /**  differentiable d1 contribution  **/ 
+    /* cannot parallelize with graph structure available here */
+    for (comp_t rv = 0; rv < rV; rv++){
+        if (saturation(rv)){ continue; }
+        for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
+            index_t v = comp_list[i];
+            for (index_t e = first_edge[v]; e < first_edge[v + 1]; e++){
+                if (is_active(e)){
+                    index_t u = adj_vertices[e];
+                    real_t grad_d1 = rX[rv] > rX[comp_assign[u]] ?
+                        EDGE_WEIGHTS_(e) : -EDGE_WEIGHTS_(e);
+                    grad[v] += grad_d1;
+                    grad[u] -= grad_d1;
+                }
+            }
         }
     }
 

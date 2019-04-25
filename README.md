@@ -23,14 +23,14 @@ Extension modules for Python.
 ### General problem statement
 The cut-pursuit algorithms minimize functionals structured, over a weighted graph _G_ = (_V_, _E_, _w_), as 
 
-    _F_: _x_ ∈ ℍ<sup>_V_</sup> ↦ _f_(_x_) + 
+    _F_: _x_ ∈ _Ω_<sup>_V_</sup> ↦ _f_(_x_) + 
  ∑<sub>(_u_,_v_) ∈ _E_</sub> _w_<sub>(_u_,_v_)</sub>  _ψ_(_x_<sub>_u_</sub>, _x_<sub>_v_</sub>) ,    
 
-where ℍ is some base space, and the functional _ψ_: ℍ² → ℝ penalizes dissimilarity between its arguments, in order to enforce solutions which are *piecewise constant along the graph _G_*.
+where _Ω_ is some base set, and the functional _ψ_: _Ω_² → ℝ penalizes dissimilarity between its arguments, in order to enforce solutions which are *piecewise constant along the graph _G_*.
 
 The cut-pursuit approach is to seek partitions __*V*__ of the set of vertices _V_, constituting the constant connected components of the solution, by successively solving the corresponding problem, structured over the reduced graph __*G*__ = (__*V*__, __*E*__), that is
 
-  arg min<sub>_ξ_ ∈ ℍ<sup>__*V*__</sup></sub>
+  arg min<sub>_ξ_ ∈ _Ω_<sup>__*V*__</sup></sub>
   _F_(_x_) ,    such that ∀ _U_ ∈ __*V*__, ∀ _u_ ∈ _U_, _x_<sub>_u_</sub> = _ξ_<sub>_U_</sub> ,
 
 and then refining the partition.  
@@ -38,12 +38,12 @@ A key requirement is thus the ability to solve the reduced problem, which often 
 
 Cut-pursuit algorithms come in two main flavors, namely “directionally differentiable” and “noncontinuous”.
 
-* In the **directionally differentiable** case, the base space ℍ is typically a vector space, and it is required that _f_ is differentiable, or at least that its nondifferentiable part is _separable along the graph_ and admits (potentially infinite) _directional derivatives_. This comprises notably many convex problems, where 
+* In the **directionally differentiable** case, the base space _Ω_ is typically a vector space, and it is required that _f_ is differentiable, or at least that its nondifferentiable part is _separable along the graph_ and admits (potentially infinite) _directional derivatives_. This comprises notably many convex problems, where 
 _ψ_(_x_<sub>_u_</sub>, _x_<sub>_v_</sub>) = ║<i>x</i><sub>_u_</sub> − _x_<sub>_v_</sub>║, that is to say involving a _**graph total variation**_. The refinement of the partition is based on the search for a steep directional derivative, and the reduced problem is solved using convex or continuous optimization; optimality guarantees can be provided.  
 
 * In the **noncontinuous** case, the dissimilarity penalization typically uses _ψ_(_x_<sub>_u_</sub>, _x_<sub>_v_</sub>) = 0 if _x_<sub>_u_</sub> =_x_<sub>_v_</sub>, 1 otherwise, resulting in a measure of the _**contour length**_ of the constant connected components. The functional _f_ is typically required to be separable along the graph, and to have computational properties favorable enough for solving reduced problems. The refinement of the partition relies on greedy heuristics.
 
-Both flavors admit multidimensional extensions, that is to say ℍ is not required to be only set of scalars.
+Both flavors admit multidimensional extensions, that is to say _Ω_ is not required to be only a set of scalars.
 
 ### Generic classes
 The class `Cp_graph` is a modification of the `Graph` class of Y. Boykov and V. Kolmogorov, for making use of their [maximum flow algorithm](#references).  
@@ -52,7 +52,7 @@ The class `Cp_d1` specializes methods for directionally differentiable cases inv
 The class `Cp_d0` specializes methods for noncontinuous cases involving the contour length penalization.  
 
 ### Specialization `Cp_d1_ql1b`: quadratic functional, ℓ<sub>1</sub> norm, bounds, and graph total variation
-The base space is ℍ = ℝ, and the general form is  
+The base space is _Ω_ = ℝ, and the general form is  
 
     _F_: _x_ ∈ ℝ<sup>_V_</sup> ↦  1/2 ║<i>y</i><sup>(q)</sup> − _A_<i>x</i>║<sup>2</sup> +
  ∑<sub>_v_ ∈ _V_</sub> _λ_<sub>_v_</sub> |_y_<sup>(ℓ<sub>1</sub>)</sup> − _x_<sub>_v_</sub>| +
@@ -97,7 +97,7 @@ Two examples where _A_ is a full ill-conditioned matrix are provided with [GNU O
 </tr></table>
 
 ### Specialization `Cp_d1_lsx`: separable loss, simplex constraints, and graph total variation
-The base space is ℍ = ℝ<sup>_D_</sup>, where _D_ can be seen as a set of labels, and the general form is  
+The base space is _Ω_ = ℝ<sup>_D_</sup>, where _D_ can be seen as a set of labels, and the general form is  
 
     _F_: _x_ ∈ ℝ<sup>_V_ ⨯ _D_</sup> ↦  _f_(_y_, _x_) +
  ∑<sub>_v_ ∈ _V_</sub> _ι_<sub>Δ<sub>_D_</sub></sub>(_x_<sub>_v_</sub>) +
@@ -141,20 +141,20 @@ An example with the smoothed Kullback–Leibler is provided with [GNU Octave or 
 </tr></table>
 
 ### Specialization `Cp_d0_dist`: separable distance and weighted contour length
-The base space is ℍ = ℝ<sup>_D_</sup> or Δ<sub>_D_</sub> and the general form is  
+The base space is _Ω_ = ℝ<sup>_D_</sup> or Δ<sub>_D_</sub> and the general form is  
 
     _F_: _x_ ∈ ℝ<sup>_V_ ⨯ _D_</sup> ↦  _f_(_y_, _x_) +
  ∑<sub>(_u_,_v_) ∈ _E_</sub> _w_<sup>(d<sub>0</sub>)</sup><sub>(_u_,_v_)</sub>
     ║<i>x</i><sub>_u_</sub> − _x_<sub>_v_</sub>║<sub>0</sub> ,  
 
-where _y_ ∈ ℍ<sup>_V_</sup>, _f_ is a loss functional akin to a distance (see below), and 
+where _y_ ∈ _Ω_<sup>_V_</sup>, _f_ is a loss functional akin to a distance (see below), and 
 ║&middot;║<sub>0</sub> is the ℓ<sub>0</sub> pseudo-norm _x_ ↦ 0 if _x_ = 0, 1 otherwise.  
 
 The following loss functionals are available, where _w_<sup>(_f_)</sup> ∈ ℝ<sup>_V_</sup> are weights on vertices and _m_<sup>(_f_)</sup> ∈ ℝ<sup>_D_</sup> are weights on coordinates.  
-Weighted quadratic: ℍ = ℝ<sup>_D_</sup> and 
+Weighted quadratic: _Ω_ = ℝ<sup>_D_</sup> and 
 _f_(_y_, _x_) = ∑<sub>_v_ ∈ _V_</sub> _w_<sup>(_f_)</sup><sub>_v_</sub> ∑<sub>_d_ ∈ _D_</sub> _m_<sup>(_f_)</sup><sub>_d_</sub> (_x_<sub>_v_,_d_</sub> − _y_<sub>_v_,_d_</sub>)<sup>2</sup>  
 Weighted smoothed Kullback–Leibler divergence (equivalent to cross-entropy):
-ℍ = Δ<sub>_D_</sub> and  
+_Ω_ = Δ<sub>_D_</sub> and  
 _f_(_y_, _x_) = ∑<sub>_v_ ∈ _V_</sub> _w_<sup>(_f_)</sup><sub>_v_</sub>
 KL<sub>_m_<sup>(_f_)</sup></sub>(_α_ _u_ + (1 − _α_) _y_<sub>_v_</sub>, _α_ _u_ + (1 − _α_) _x_<sub>_v_</sub>),  
 where _α_ ∈ \]0,1\[,

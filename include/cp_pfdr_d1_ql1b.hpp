@@ -92,7 +92,7 @@ public:
         int it_max, real_t dif_tol);
 
     /* overload for default dif_tol parameter */
-    void set_pfdr_param(real_t rho = 1.0, real_t cond_min = 1e-2,
+    void set_pfdr_param(real_t rho = 1.0, real_t cond_min = 1e-3,
         real_t dif_rcd = 0.0, int it_max = 1e4)
     { set_pfdr_param(rho, cond_min, dif_rcd, it_max, 1e-3*dif_tol); }
 
