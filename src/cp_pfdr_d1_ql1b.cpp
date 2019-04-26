@@ -392,18 +392,15 @@ TPL index_t CP_D1_QL1B::split()
 
     /**  differentiable d1 contribution  **/ 
     /* cannot parallelize with graph structure available here */
-    for (comp_t rv = 0; rv < rV; rv++){
-        if (saturation(rv)){ continue; }
-        for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
-            index_t v = comp_list[i];
-            for (index_t e = first_edge[v]; e < first_edge[v + 1]; e++){
-                if (is_active(e)){
-                    index_t u = adj_vertices[e];
-                    real_t grad_d1 = rX[rv] > rX[comp_assign[u]] ?
-                        EDGE_WEIGHTS_(e) : -EDGE_WEIGHTS_(e);
-                    grad[v] += grad_d1;
-                    grad[u] -= grad_d1;
-                }
+    for (index_t v = 0; v < V; v++){
+        real_t rXv = rX[comp_assign[v]];
+        for (index_t e = first_edge[v]; e < first_edge[v + 1]; e++){
+            if (is_active(e)){
+                index_t u = adj_vertices[e];
+                real_t grad_d1 = rXv > rX[comp_assign[u]] ?
+                    EDGE_WEIGHTS_(e) : -EDGE_WEIGHTS_(e);
+                grad[v] += grad_d1;
+                grad[u] -= grad_d1;
             }
         }
     }

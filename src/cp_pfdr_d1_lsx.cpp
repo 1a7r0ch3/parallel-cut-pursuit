@@ -182,30 +182,26 @@ TPL index_t CP_D1_LSX::split()
 
     /**  differentiable d1 contribution  **/ 
     /* cannot parallelize with graph structure available here */
-    for (comp_t rv = 0; rv < rV; rv++){
-        if (saturation(rv)){ continue; }
-        real_t* rXv = rX + D*rv;
-        for (index_t i = first_vertex[rv]; i < first_vertex[rv + 1]; i++){
-            index_t v = comp_list[i];
-            real_t* gradv = grad + D*v;
-            for (index_t e = first_edge[v]; e < first_edge[v + 1]; e++){
-                if (is_active(e)){
-                    index_t u = adj_vertices[e];
-                    real_t* rXu = rX + comp_assign[u]*D;
-                    real_t* gradu = grad + u*D; 
-                    for (size_t d = 0; d < D; d++){
-                        real_t grad_d1 = EDGE_WEIGHTS_(e)*COOR_WEIGHTS_(d);
-                        if (rXv[d] - rXu[d] > eps){
-                            gradv[d] += grad_d1;
-                            gradu[d] -= grad_d1;
-                        }else if (rXu[d] - rXv[d] > eps){
-                            gradu[d] += grad_d1;
-                            gradv[d] -= grad_d1;
-                        }
-                        /* equality of _some_ coordinates constitutes a source
-                         * of nondifferentiability; this is actually not taken
-                         * into account, see below */
+    for (index_t v = 0; v < V; v++){
+        real_t* rXv = rX + D*comp_assign[v];
+        real_t* gradv = grad + D*v;
+        for (index_t e = first_edge[v]; e < first_edge[v + 1]; e++){
+            if (is_active(e)){
+                index_t u = adj_vertices[e];
+                real_t* rXu = rX + D*comp_assign[u];
+                real_t* gradu = grad + D*u; 
+                for (size_t d = 0; d < D; d++){
+                    real_t grad_d1 = EDGE_WEIGHTS_(e)*COOR_WEIGHTS_(d);
+                    if (rXv[d] - rXu[d] > eps){
+                        gradv[d] += grad_d1;
+                        gradu[d] -= grad_d1;
+                    }else if (rXu[d] - rXv[d] > eps){
+                        gradu[d] += grad_d1;
+                        gradv[d] -= grad_d1;
                     }
+                    /* equality of _some_ coordinates constitutes a source
+                     * of nondifferentiability; this is actually not taken
+                     * into account, see below */
                 }
             }
         }
