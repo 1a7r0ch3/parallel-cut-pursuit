@@ -15,8 +15,6 @@ import matplotlib.pyplot as plt
 
 os.chdir(os.path.realpath(os.path.dirname(__file__)))
 sys.path.append(os.path.join(os.path.realpath(os.path.dirname(__file__)), 
-                                              "bin"))
-sys.path.append(os.path.join(os.path.realpath(os.path.dirname(__file__)), 
                                               "wrappers"))
 
 from cp_pfdr_d1_ql1b import cp_pfdr_d1_ql1b 
@@ -56,8 +54,8 @@ upp_bnd = 1.0
 it1 = time.time()
 Comp, rX, it = cp_pfdr_d1_ql1b(
         y, A, first_edge, adj_vertices, d1_weights, Yl1, l1_weights, low_bnd, 
-    upp_bnd, cp_dif_tol, cp_it_max, pfdr_rho, pfdr_cond_min, pfdr_dif_rcd,
-    pfdr_dif_tol, PFDR_IT_Max, pfdr_verbose)
+        upp_bnd, cp_dif_tol, cp_it_max, pfdr_rho, pfdr_cond_min, pfdr_dif_rcd,
+        pfdr_dif_tol, pfdr_it_max, pfdr_verbose)
 it2 = time.time()
 x = rX[Comp] # rX is components values, Comp is components assignment
 del rX, Comp

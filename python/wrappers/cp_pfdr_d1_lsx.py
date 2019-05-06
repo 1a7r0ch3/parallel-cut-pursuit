@@ -1,14 +1,19 @@
 import numpy as np
 import os 
 import sys
-from cp_pfdr_d1_lsx_ext import cp_pfdr_d1_lsx_ext
+
+sys.path.append(os.path.join(os.path.realpath(os.path.dirname(__file__)), 
+                                              "../bin"))
+
+from cp_pfdr_d1_lsx_cpy import cp_pfdr_d1_lsx_cpy
 
 def cp_pfdr_d1_lsx(loss, Y, first_edge, adj_vertices, edge_weights=None, 
                    loss_weights=None, d1_coor_weights=None, cp_dif_tol=1e-3,
                    cp_it_max=10, pfdr_rho=1., pfdr_cond_min=1e-2, 
                    pfdr_dif_rcd=0., pfdr_dif_tol=None, pfdr_it_max=int(1e4),
-                   verbose=int(1e2), compute_Obj=False, compute_Time=False, 
-                   compute_Dif=False):
+                   verbose=int(1e2), max_num_threads=0, 
+                   balance_parallel_split=True, compute_Obj=False, 
+                   compute_Time=False, compute_Dif=False):
 
     """
     Comp, rX, cp_it, Obj, Time, Dif = cp_pfdr_d1_lsx(
@@ -16,7 +21,8 @@ def cp_pfdr_d1_lsx(loss, Y, first_edge, adj_vertices, edge_weights=None,
             loss_weights=None, d1_coor_weights=None, cp_dif_tol=1e-3,
             cp_it_max=10, pfdr_rho=1.0, pfdr_cond_min=1e-2, pfdr_dif_rcd=0.0,
             pfdr_dif_tol=1e-3*cp_dif_tol, pfdr_it_max=1e4, verbose=1e2, 
-            compute_Obj=False, compute_Time=False, compute_Dif=False)
+            max_num_threads=0, balance_parallel_split=True, compute_Obj=False,
+            compute_Time=False, compute_Dif=False)
 
     Cut-pursuit algorithm with d1 (total variation) penalization, with a 
     separable loss term and simplex constraints:
@@ -108,6 +114,10 @@ def cp_pfdr_d1_lsx(loss, Y, first_edge, adj_vertices, edge_weights=None,
         1e4 iterations provides enough precision for most subproblems
     verbose - if nonzero, display information on the progress, every 'verbose'
         PFDR iterations
+    max_num_threads - if greater than zero, set the maximum number of threads
+        used for parallelization with OpenMP
+    balance_parallel_split - if true, the parallel workload of the split step 
+        is balanced; WARNING: this might trades off speed against optimality
     compute_Obj  - compute the objective functional along iterations 
     compute_Time - monitor elapsing time along iterations
     compute_Dif  - compute relative evolution along iterations 
@@ -140,9 +150,9 @@ def cp_pfdr_d1_lsx(loss, Y, first_edge, adj_vertices, edge_weights=None,
     
     # Determine the type of float argument (real_t) 
     # real_t type is determined by the first parameter Y 
-    if Y.any() and Y.dtype == "float64":
+    if Y.size > 0 and Y.dtype == "float64":
         real_t = "float64" 
-    elif Y.any() and Y.dtype == "float32":
+    elif Y.size > 0 and Y.dtype == "float32":
         real_t = "float32" 
     else:
         raise TypeError("argument 'Y' must be a nonempty numpy array of type "
@@ -188,6 +198,13 @@ def cp_pfdr_d1_lsx(loss, Y, first_edge, adj_vertices, edge_weights=None,
             d1_coor_weights = np.array([d1_coor_weights], dtype=real_t)
         else:
             d1_coor_weights = np.array([], dtype=real_t)
+
+    # Check graph structure 
+    if first_edge.size != Y.shape[1] + 1 :
+        raise ValueError("Cut-pursuit d1 quadratic l1 bounds: argument "
+                         "'first_edge' should contain |V| + 1 = {0} elements, "
+                         "but {1} are given".format(Y.shape[1]+1, 
+                          first_edge.size))
  
     # Check type of all numpy.array arguments of type float (Y, edge_weights,
     # loss_weights, d1_coor_weights) 
@@ -198,15 +215,9 @@ def cp_pfdr_d1_lsx(loss, Y, first_edge, adj_vertices, edge_weights=None,
             raise TypeError("argument '{0}' must be of type '{1}'"
                             .format(name, real_t))
 
-    # Check fortran continuity of all numpy.array arguments of type float (Y,
-    # first_edge, adj_vertices, edge_weights, loss_weights, d1_coor_weights)
-    for name, ar_args in zip(
-            ["Y", "first_edge", "adj_vertices", "edge_weights", 
-             "loss_weights", "d1_coor_weights"],
-            [Y, first_edge, adj_vertices, edge_weights, loss_weights,
-             d1_coor_weights]):
-        if not(ar_args.flags["F_CONTIGUOUS"]):
-            raise TypeError("argument '{0}' must be F_CONTIGUOUS".format(name))
+    # Check fortran continuity of all multidimensional numpy.array arguments
+    if not(Y.flags["F_CONTIGUOUS"]):
+        raise TypeError("argument 'Y' must be F_CONTIGUOUS")
 
     # Convert in float64 all float arguments if needed (cp_dif_tol, pfdr_rho,
     # pfdr_cond_min, pfdr_dif_rcd, pfdr_dif_tol) 
@@ -223,21 +234,24 @@ def cp_pfdr_d1_lsx(loss, Y, first_edge, adj_vertices, edge_weights=None,
     cp_it_max = int(cp_it_max)
     pfdr_it_max = int(pfdr_it_max)
     verbose = int(verbose)
+    max_num_threads = int(max_num_threads)
 
     # Check type of all booleen arguments (AtA_if_square, compute_Obj, 
     # compute_Time, compute_Dif)
     for name, b_args in zip(
-        ["compute_Obj", "compute_Time", "compute_Dif"],
-        [compute_Obj, compute_Time, compute_Dif]):
+        ["balance_parallel_split", "compute_Obj", "compute_Time", 
+         "compute_Dif"],
+        [balance_parallel_split, compute_Obj, compute_Time, compute_Dif]):
         if type(b_args) != bool:
             raise TypeError("argument '{0}' must be boolean".format(name))
 
     # Call wrapper python in C  
-    Comp, rX, it, Obj, Time, Dif = cp_pfdr_d1_lsx_ext(
+    Comp, rX, it, Obj, Time, Dif = cp_pfdr_d1_lsx_cpy(
             loss, Y, first_edge, adj_vertices, edge_weights, loss_weights,
             d1_coor_weights, cp_dif_tol, cp_it_max, pfdr_rho, pfdr_cond_min,
-            pfdr_dif_rcd, pfdr_dif_tol, pfdr_it_max, verbose,
-            real_t == "float64", compute_Obj, compute_Time, compute_Dif) 
+            pfdr_dif_rcd, pfdr_dif_tol, pfdr_it_max, verbose, max_num_threads,
+            balance_parallel_split, real_t == "float64", compute_Obj, 
+            compute_Time, compute_Dif) 
 
     it = it[0]
     

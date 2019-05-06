@@ -1,12 +1,17 @@
 import numpy as np
 import os 
 import sys
-from cp_kmpp_d0_dist_ext import cp_kmpp_d0_dist_ext
+
+sys.path.append(os.path.join(os.path.realpath(os.path.dirname(__file__)), 
+                                              "../bin"))
+
+from cp_kmpp_d0_dist_cpy import cp_kmpp_d0_dist_cpy
 
 def cp_kmpp_d0_dist(loss, Y, first_edge, adj_vertices, edge_weights=None, 
                    vert_weights=None, coor_weights=None, cp_dif_tol=1e-3,
                    cp_it_max=10, K=2, split_iter_num=2, kmpp_init_num=3,
-                   kmpp_iter_num=3, verbose=int(1e2), compute_Obj=False, 
+                   kmpp_iter_num=3, verbose=int(1e2), max_num_threads=0, 
+                   balance_parallel_split=True, compute_Obj=False, 
                    compute_Time=False, compute_Dif=False):
 
     """
@@ -14,8 +19,9 @@ def cp_kmpp_d0_dist(loss, Y, first_edge, adj_vertices, edge_weights=None,
             loss, Y, first_edge, adj_vertices, edge_weights=None, 
             vert_weights=None, coor_weights=None, cp_dif_tol=1e-3, 
             cp_it_max=10, K=2, split_iter_num=2, kmpp_init_num=3, 
-            kmpp_iter_num=3, verbose=1, compute_Obj=False, compute_Time=False,
-            compute_Dif=False)
+            kmpp_iter_num=3, verbose=1, max_num_threads=0, 
+            balance_parallel_split=True, compute_Obj=False, 
+            compute_Time=False, compute_Dif=False)
 
     Cut-pursuit algorithm with d0 (weighted contour length) penalization, with
     a loss akin to a distance:
@@ -94,6 +100,10 @@ def cp_kmpp_d0_dist(loss, Y, first_edge, adj_vertices, edge_weights=None,
     kmpp_init_num - number of random k-means initializations in the split step
     kmpp_iter_num - number of k-means iterations in the split step
     verbose       - if nonzero, display information on the progress
+    max_num_threads - if greater than zero, set the maximum number of threads
+        used for parallelization with OpenMP
+    balance_parallel_split - if true, the parallel workload of the split step 
+        is balanced; WARNING: this might trades off speed against optimality
     compute_Obj   - compute the objective functional along iterations 
     compute_Time  - monitor elapsing time along iterations
     compute_Dif   - compute relative evolution along iterations 
@@ -128,9 +138,9 @@ def cp_kmpp_d0_dist(loss, Y, first_edge, adj_vertices, edge_weights=None,
     
     # Determine the type of float argument (real_t) 
     # real_t type is determined by the first parameter Y 
-    if Y.any() and Y.dtype == "float64":
+    if Y.size > 0 and Y.dtype == "float64":
         real_t = "float64" 
-    elif Y.any() and Y.dtype == "float32":
+    elif Y.size > 0 and Y.dtype == "float32":
         real_t = "float32" 
     else:
         raise TypeError("argument 'Y' must be a nonempty numpy array of type "
@@ -176,6 +186,17 @@ def cp_kmpp_d0_dist(loss, Y, first_edge, adj_vertices, edge_weights=None,
             coor_weights = np.array([coor_weights], dtype=real_t)
         else:
             coor_weights = np.array([], dtype=real_t)
+
+    # Determine V and check graph structure 
+    if Y.ndim > 1:
+        V = Y.shape[1]
+    else:
+        V = Y.shape[0]
+        
+    if first_edge.size != V + 1 :
+        raise ValueError("Cut-pursuit d1 quadratic l1 bounds: argument "
+                         "'first_edge' should contain |V| + 1 = {0} elements, "
+                         "but {1} are given".format(V+1, first_edge.size))
  
     # Check type of all numpy.array arguments of type float (Y, edge_weights,
     # vert_weights, coor_weights) 
@@ -186,15 +207,9 @@ def cp_kmpp_d0_dist(loss, Y, first_edge, adj_vertices, edge_weights=None,
             raise TypeError("argument '{0}' must be of type '{1}'"
                             .format(name, real_t))
 
-    # Check fortran continuity of all numpy.array arguments of type float (Y,
-    # first_edge, adj_vertices, edge_weights, vert_weights, coor_weights)
-    for name, ar_args in zip(
-            ["Y", "first_edge", "adj_vertices", "edge_weights", 
-             "vert_weights", "coor_weights"],
-            [Y, first_edge, adj_vertices, edge_weights, vert_weights,
-             coor_weights]):
-        if not(ar_args.flags["F_CONTIGUOUS"]):
-            raise TypeError("argument '{0}' must be F_CONTIGUOUS".format(name))
+    # Check fortran continuity of all multidimensional numpy.array arguments
+    if not(Y.flags["F_CONTIGUOUS"]):
+        raise TypeError("argument 'Y' must be F_CONTIGUOUS")
 
     # Convert in float64 all float arguments if needed (loss, cp_dif_tol) 
     loss = float(loss)
@@ -208,21 +223,24 @@ def cp_kmpp_d0_dist(loss, Y, first_edge, adj_vertices, edge_weights=None,
     kmpp_init_num = int(kmpp_init_num)
     kmpp_iter_num = int(kmpp_iter_num)
     verbose = int(verbose)
+    max_num_threads = int(max_num_threads)
 
     # Check type of all booleen arguments (AtA_if_square, compute_Obj, 
     # compute_Time, compute_Dif)
     for name, b_args in zip(
-        ["compute_Obj", "compute_Time", "compute_Dif"],
-        [compute_Obj, compute_Time, compute_Dif]):
+        ["balance_parallel_split", "compute_Obj", "compute_Time", 
+         "compute_Dif"],
+        [balance_parallel_split, compute_Obj, compute_Time, compute_Dif]):
         if type(b_args) != bool:
             raise TypeError("argument '{0}' must be boolean".format(name))
 
     # Call wrapper python in C  
-    Comp, rX, it, Obj, Time, Dif = cp_kmpp_d0_dist_ext(
+    Comp, rX, it, Obj, Time, Dif = cp_kmpp_d0_dist_cpy(
             loss, Y, first_edge, adj_vertices, edge_weights, vert_weights,
             coor_weights, cp_dif_tol, cp_it_max, K, split_iter_num,
-            kmpp_init_num, kmpp_iter_num, verbose, real_t == "float64", 
-            compute_Obj, compute_Time, compute_Dif) 
+            kmpp_init_num, kmpp_iter_num, verbose, max_num_threads, 
+            balance_parallel_split, real_t == "float64", compute_Obj, 
+            compute_Time, compute_Dif) 
 
     it = it[0]
     

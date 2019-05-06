@@ -16,13 +16,15 @@ import re
 
 ###  targets and compile options  ###
 to_compile = [ # comment undesired extension modules
-    "cp_pfdr_d1_ql1b_ext",
-    "cp_pfdr_d1_lsx_ext",
-    "cp_kmpp_d0_dist_ext"
+    "cp_pfdr_d1_ql1b_cpy",
+    "cp_pfdr_d1_lsx_cpy",
+    "cp_kmpp_d0_dist_cpy"
 ]
 include_dirs = [numpy.get_include()] # find the Numpy headers
 # compilation and linkage options
-extra_compile_args = ["-Wextra", "-Wpedantic", "-std=c++11", "-fopenmp"]
+# D_GLIBCXX_PARALLEL is only useful for libstdc++ users
+extra_compile_args = ["-Wextra", "-Wpedantic", "-std=c++11", "-fopenmp",
+                      "-g0", "-D_GLIBCXX_PARALLEL"]
 extra_link_args = ["-lgomp"]
 
 ###  auxiliary functions  ###
@@ -38,23 +40,28 @@ def purge(dir, pattern):
         if re.search(pattern, f):
             os.remove(os.path.join(dir, f))
 
-
 ###  preprocessing  ###
 # ensure right working directory
 tmp_work_dir = os.path.realpath(os.curdir)
 os.chdir(os.path.realpath(os.path.dirname(__file__)))
+
+try:
+    os.mkdir("bin")
+except FileExistsError:
+    pass 
+
 # remove previously compiled lib
 for shared_obj in to_compile: 
     purge("bin/", shared_obj) 
 
 ###  compilation  ###
 
-name = "cp_pfdr_d1_ql1b_ext"
+name = "cp_pfdr_d1_ql1b_cpy"
 if name in to_compile:
     mod = Extension(
             name,
             # list source files
-            ["cpython/cp_pfdr_d1_ql1b.cpp", "../src/cp_pfdr_d1_ql1b.cpp",
+            ["cpython/cp_pfdr_d1_ql1b_cpy.cpp", "../src/cp_pfdr_d1_ql1b.cpp",
              "../src/cut_pursuit_d1.cpp", "../src/cut_pursuit.cpp",
              "../src/cp_graph.cpp", "../src/pfdr_d1_ql1b.cpp",
              "../src/matrix_tools.cpp", "../src/pfdr_graph_d1.cpp", 
@@ -65,12 +72,12 @@ if name in to_compile:
     setup(name=name, ext_modules=[mod], cmdclass=dict(build=MyBuild))
 
 
-name = "cp_pfdr_d1_lsx_ext"
+name = "cp_pfdr_d1_lsx_cpy"
 if name in to_compile:
     mod = Extension(
             name,
             # list source files
-            ["cpython/cp_pfdr_d1_lsx.cpp", "../src/cp_pfdr_d1_lsx.cpp",
+            ["cpython/cp_pfdr_d1_lsx_cpy.cpp", "../src/cp_pfdr_d1_lsx.cpp",
              "../src/cut_pursuit_d1.cpp", "../src/cut_pursuit.cpp",
              "../src/cp_graph.cpp", "../src/pfdr_d1_lsx.cpp",
              "../src/proj_simplex.cpp", "../src/pfdr_graph_d1.cpp",
@@ -81,12 +88,12 @@ if name in to_compile:
     setup(name=name, ext_modules=[mod], cmdclass=dict(build=MyBuild))
 
 
-name = "cp_kmpp_d0_dist_ext"
+name = "cp_kmpp_d0_dist_cpy"
 if name in to_compile:
     mod = Extension(
             name,
             # list source files
-            ["cpython/cp_kmpp_d0_dist.cpp", "../src/cp_kmpp_d0_dist.cpp",
+            ["cpython/cp_kmpp_d0_dist_cpy.cpp", "../src/cp_kmpp_d0_dist.cpp",
              "../src/cut_pursuit_d0.cpp", "../src/cut_pursuit.cpp",
              "../src/cp_graph.cpp"], 
             include_dirs=include_dirs,

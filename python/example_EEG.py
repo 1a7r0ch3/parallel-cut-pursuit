@@ -16,8 +16,6 @@ from mpl_toolkits.mplot3d import Axes3D
 
 os.chdir(os.path.realpath(os.path.dirname(__file__)))
 sys.path.append(os.path.join(os.path.realpath(os.path.dirname(__file__)), 
-                                              "bin"))
-sys.path.append(os.path.join(os.path.realpath(os.path.dirname(__file__)), 
                                               "wrappers"))
 
 from cp_pfdr_d1_ql1b import cp_pfdr_d1_ql1b 

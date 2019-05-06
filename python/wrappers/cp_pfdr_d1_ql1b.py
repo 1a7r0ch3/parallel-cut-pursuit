@@ -1,23 +1,29 @@
 import numpy as np
 import os 
 import sys
-from cp_pfdr_d1_ql1b_ext import cp_pfdr_d1_ql1b_ext
 
-def cp_pfdr_d1_ql1b(Y, A, first_edge, adj_vertices, edge_weights=1.0, 
+sys.path.append(os.path.join(os.path.realpath(os.path.dirname(__file__)), 
+                                              "../bin"))
+
+from cp_pfdr_d1_ql1b_cpy import cp_pfdr_d1_ql1b_cpy
+
+def cp_pfdr_d1_ql1b(Y, A, first_edge, adj_vertices, edge_weights=None, 
                     Yl1=None, l1_weights=None, low_bnd=None, upp_bnd=None, 
                     cp_dif_tol=1e-5, cp_it_max=10, pfdr_rho=1., 
                     pfdr_cond_min=1e-2, pfdr_dif_rcd=0., pfdr_dif_tol=None, 
                     pfdr_it_max=int(1e4), verbose=int(1e3), 
+                    max_num_threads=0, balance_parallel_split=True,
                     AtA_if_square=True, compute_Obj=False,
                     compute_Time=False, compute_Dif=False):
     """
     Comp, rX, cp_it, Obj, Time, Dif = cp_pfdr_d1_ql1b(
-            Y | AtY, A | AtA, first_edge, adj_vertices, edge_weights=1.0,
+            Y | AtY, A | AtA, first_edge, adj_vertices, edge_weights=None,
             Yl1=None, l1_weights=None, low_bnd=None, upp_bnd=None,
             cp_dif_tol=1e-5, cp_it_max=10, pfdr_rho=1.0, pfdr_cond_min=1e-2,
             pfdr_dif_rcd=0.0, pfdr_dif_tol=1e-3*cp_dif_tol,
             pfdr_it_max=int(1e4), verbose=int(1e3), AtA_if_square=True,
-            compute_Obj=False, compute_Time=False, compute_Dif=False)
+            max_num_threads=0, balance_parallel_split=True, compute_Obj=False,
+            compute_Time=False, compute_Dif=False)
 
     Cut-pursuit algorithm with d1 (total variation) penalization, with a 
     quadratic functional, l1 penalization and box constraints:
@@ -106,6 +112,10 @@ def cp_pfdr_d1_ql1b(Y, A, first_edge, adj_vertices, edge_weights=1.0,
                    precision for most subproblems
     verbose      - if nonzero, display information on the progress, every
                    'verbose' PFDR iterations
+    max_num_threads - if greater than zero, set the maximum number of threads
+        used for parallelization with OpenMP
+    balance_parallel_split - if true, the parallel workload of the split step 
+        is balanced; WARNING: this might trades off speed against optimality
     AtA_if_square - if A is square, set this to false for direct matricial case
     compute_Obj  - compute the objective functional along iterations 
     compute_Time - monitor elapsing time along iterations
@@ -141,9 +151,9 @@ def cp_pfdr_d1_ql1b(Y, A, first_edge, adj_vertices, edge_weights=1.0,
 
     # Determine the type of float argument (real_t) 
     # real type is determined by Y or Yl1
-    if type(Y) == np.ndarray and Y.any():
+    if type(Y) == np.ndarray and Y.size > 0:
         real_t = Y.dtype
-    elif type(Yl1) == np.ndarray and Yl1.any():
+    elif type(Yl1) == np.ndarray and Yl1.size > 0:
         real_t = Yl1.dtype
     else:
         raise TypeError(("At least one of arguments 'Y' or 'Yl1' "
@@ -218,7 +228,22 @@ def cp_pfdr_d1_ql1b(Y, A, first_edge, adj_vertices, edge_weights=1.0,
         else: 
             upp_bnd = np.array([np.inf], dtype=real_t)
 
+    # Determine V and check the graph structure
+    if A.ndim > 1 and A.shape[1] != 1:
+        V = A.shape[1] 
+    elif A.shape[0] == 1:
+        if Y.size > 0:
+            V = Y.size
+        elif Yl1.size > 0:
+            V = Yl1.size
+    else:
+        V = A.shape[0]
     
+    if first_edge.size != (V + 1):
+        raise ValueError("Cut-pursuit d1 quadratic l1 bounds: argument "
+                         "'first_edge' should contain |V + 1| = {0} elements, "
+                         "but {1} are given.".format(V+1, first_edge.size))
+ 
     # Check type of all numpy.array arguments of type float (Y, A, 
     # edge_weights, Yl1, l1_weights, low_bnd, upp_bnd) 
     for name, ar_args in zip(
@@ -229,16 +254,11 @@ def cp_pfdr_d1_ql1b(Y, A, first_edge, adj_vertices, edge_weights=1.0,
             raise TypeError("argument '{0}' must be of type '{1}'"
                             .format(name, real_t))
 
-    # Check fortran continuity of all numpy.array arguments of type float 
-    # (Y, A, first_edge, adj_vertices, edge_weights, Yl1, l1_weights, low_bnd,
-    # upp_bnd) 
-    for name, ar_args in zip(
-            ["Y", "A", "first_edge", "adj_vertices", "edge_weights", "Yl1",
-             "l1_weights", "low_bnd", "upp_bnd"],
-            [Y, A, first_edge, adj_vertices, edge_weights, Yl1, l1_weights,
-             low_bnd, upp_bnd]):
-        if not(ar_args.flags["F_CONTIGUOUS"]):
-            raise TypeError("argument '{0}' must be F_CONTIGUOUS".format(name))
+    # Check fortran continuity of all multidimensional numpy.array arguments
+    if not(Y.flags["F_CONTIGUOUS"]):
+        raise TypeError("argument 'Y' must be F_CONTIGUOUS")
+    if not(A.flags["F_CONTIGUOUS"]):
+        raise TypeError("argument 'A' must be F_CONTIGUOUS")
 
     # Convert in float64 all float arguments if needed (cp_dif_tol, pfdr_rho, 
     # pfdr_cond_min, pfdr_dif_rcd, pfdr_dif_tol) 
@@ -254,23 +274,25 @@ def cp_pfdr_d1_ql1b(Y, A, first_edge, adj_vertices, edge_weights=1.0,
     cp_it_max = int(cp_it_max)
     pfdr_it_max = int(pfdr_it_max)
     verbose = int(verbose)
+    max_num_threads = int(max_num_threads)
 
     # Check type of all booleen arguments (AtA_if_square, compute_Obj,
     # compute_Time, compute_Dif)
     for name, b_args in zip(
-            ["AtA_if_square", "compute_Obj", "compute_Time", "compute_Dif"],
-            [AtA_if_square, compute_Obj, compute_Time, compute_Dif]):
+            ["AtA_if_square", "balance_parallel_split", "compute_Obj", 
+             "compute_Time", "compute_Dif"],
+            [AtA_if_square, balance_parallel_split, compute_Obj, compute_Time,
+             compute_Dif]):
         if type(b_args) != bool:
             raise TypeError("argument '{0}' must be boolean".format(name))
-
-    print(type(Y), type(A), type(first_edge), type(adj_vertices), type(edge_weights), type(Yl1), type(l1_weights), type(low_bnd), type(upp_bnd), type(cp_dif_tol), type(cp_it_max), type(pfdr_rho), type(pfdr_cond_min), type(pfdr_dif_rcd), type(pfdr_dif_tol), type(pfdr_it_max), type(verbose), type(AtA_if_square), type(real_t == "float64"), type(compute_Obj), type(compute_Time), type(compute_Dif)) 
-
+    
     # Call wrapper python in C  
-    Comp, rX, it, Obj, Time, Dif = cp_pfdr_d1_ql1b_ext(
+    Comp, rX, it, Obj, Time, Dif = cp_pfdr_d1_ql1b_cpy(
             Y, A, first_edge, adj_vertices, edge_weights, Yl1, l1_weights,
             low_bnd, upp_bnd, cp_dif_tol, cp_it_max, pfdr_rho, pfdr_cond_min,
-            pfdr_dif_rcd, pfdr_dif_tol, pfdr_it_max, verbose, AtA_if_square,
-            real_t == "float64", compute_Obj, compute_Time, compute_Dif) 
+            pfdr_dif_rcd, pfdr_dif_tol, pfdr_it_max, verbose, max_num_threads,
+            balance_parallel_split, AtA_if_square, real_t == "float64", 
+            compute_Obj, compute_Time, compute_Dif) 
 
     it = it[0]
     

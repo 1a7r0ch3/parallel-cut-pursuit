@@ -93,8 +93,8 @@ static void cp_pfdr_d1_ql1b_mex(int nlhs, mxArray **plhs, int nrhs, \
         if (N == 1){
             if (!mxIsEmpty(prhs[0])){ /* fidelity is square l2 */
                 V = mxGetNumberOfElements(prhs[0]);
-            }else if (!mxIsEmpty(prhs[4])){ /* fidelity is only l1 */
-                V = mxGetNumberOfElements(prhs[4]);
+            }else if (!mxIsEmpty(prhs[5])){ /* fidelity is only l1 */
+                V = mxGetNumberOfElements(prhs[5]);
             }else{ /* should not happen */
                 mexErrMsgIdAndTxt("MEX", "Cut-pursuit d1 quadratic l1 bounds: "
                     "arguments Y and Yl1 cannot be both empty.");

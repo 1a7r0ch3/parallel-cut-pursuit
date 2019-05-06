@@ -19,8 +19,6 @@ import time
 
 os.chdir(os.path.realpath(os.path.dirname(__file__)))
 sys.path.append(os.path.join(os.path.realpath(os.path.dirname(__file__)), 
-                                              "bin"))
-sys.path.append(os.path.join(os.path.realpath(os.path.dirname(__file__)), 
                                               "wrappers"))
 
 from cp_kmpp_d0_dist import cp_kmpp_d0_dist 
